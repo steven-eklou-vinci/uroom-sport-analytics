@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+*/node_modules/
+urroom-api/node_modules/
+urroom-sports-analytics/node_modules/
+
+# Build outputs
+.next/
+*/. next/
+urroom-sports-analytics/.next/
+urroom-sports-analytics/out/
+urroom-api/dist/
+urroom-api/build/
+
+# Environment variables
+.env
+.env*.local
+*.env
+urroom-api/.env
+urroom-sports-analytics/.env
+urroom-sports-analytics/.env.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+coverage/
+.nyc_output/
+
+# Prisma
+urroom-api/prisma/dev.db
+urroom-api/prisma/dev.db-journal
+urroom-sports-analytics/prisma/dev.db
+
+# Uploads
+urroom-api/uploads/
+uploads/
+
+# Temp files
+*.tmp
+*.temp
+.cache/
+
+# Package manager locks (optionnel - certains préfèrent les garder)
+# package-lock.json
+# yarn.lock

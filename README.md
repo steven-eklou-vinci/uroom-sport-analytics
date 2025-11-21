@@ -1,119 +1,119 @@
 # 🏆 Uroom Sports Analytics
 
-**Plateforme complète d'analyse et de gestion de talents sportifs**
+**Complete platform for sports talent analysis and management**
 
-Une solution moderne de bout en bout pour la découverte, l'évaluation et le suivi de jeunes talents sportifs, conçue pour les clubs, scouts, agents et joueurs.
+A modern end-to-end solution for discovering, evaluating, and tracking young sports talents, designed for clubs, scouts, agents, and players.
 
-## 📋 Table des matières
+## 📋 Table of Contents
 
-- [Aperçu](#aperçu)
-- [Fonctionnalités principales](#fonctionnalités-principales)
-- [Architecture technique](#architecture-technique)
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Technical Architecture](#technical-architecture)
 - [Installation](#installation)
 - [Configuration](#configuration)
-- [Utilisation](#utilisation)
-- [Structure du projet](#structure-du-projet)
+- [Usage](#usage)
+- [Project Structure](#project-structure)
 - [API](#api)
-- [Contribution](#contribution)
+- [Contributing](#contributing)
 
-## 🎯 Aperçu
+## 🎯 Overview
 
-Uroom Sports Analytics est une plateforme SaaS qui révolutionne le processus de recrutement sportif en offrant :
+Uroom Sports Analytics is a SaaS platform that revolutionizes the sports recruitment process by offering:
 
-- 🔍 **Recherche avancée** de joueurs avec filtres multicritères
-- 📊 **Évaluations détaillées** avec métriques visuelles (graphiques radar)
-- 🤖 **Prédictions IA** sur l'évolution des aptitudes des joueurs
-- 👥 **Collaboration entre scouts** avec système de badges
-- 📝 **Rapports professionnels** exportables en PDF
-- 🎯 **Gestion des essais** et shortlists
-- 📈 **Tableaux de bord personnalisés** par rôle
+- 🔍 **Advanced player search** with multi-criteria filters
+- 📊 **Detailed assessments** with visual metrics (radar charts)
+- 🤖 **AI predictions** on player skill evolution
+- 👥 **Scout collaboration** with badge system
+- 📝 **Professional reports** exportable to PDF
+- 🎯 **Trials and shortlist management**
+- 📈 **Role-based personalized dashboards**
 
-## ✨ Fonctionnalités principales
+## ✨ Key Features
 
-### Pour les Clubs
-- Gestion d'équipe de scouts
-- Vue d'ensemble des rapports soumis
-- Suivi des joueurs identifiés
-- Organisation des essais
-- Statistiques et analytics
+### For Clubs
+- Scout team management
+- Overview of submitted reports
+- Tracking of identified players
+- Trial organization
+- Statistics and analytics
 
-### Pour les Scouts
-- Dashboard personnel avec activité récente
-- Recherche et suivi de joueurs
-- Badges collaboratifs (voir quels collègues suivent un joueur)
-- Création de rapports détaillés
-- Liste de joueurs suivis
+### For Scouts
+- Personal dashboard with recent activity
+- Player search and tracking
+- Collaborative badges (see which colleagues follow a player)
+- Detailed report creation
+- List of followed players
 
-### Pour les Joueurs
-- Profil public professionnel
-- Visualisation des évaluations (radar charts)
-- Prédictions d'évolution sur 5 ans
-- Historique des performances
-- Gestion des vidéos de jeu
+### For Players
+- Professional public profile
+- Assessment visualization (radar charts)
+- 5-year evolution predictions
+- Performance history
+- Game video management
 
-### Pour les Agents
-- Portfolio de joueurs
-- Suivi des opportunités
-- Communication avec les clubs
+### For Agents
+- Player portfolio
+- Opportunity tracking
+- Communication with clubs
 
-## 🛠 Architecture technique
+## 🛠 Technical Architecture
 
 ### Frontend (`urroom-sports-analytics/`)
-- **Framework** : Next.js 15.5.3 (App Router)
-- **Authentification** : NextAuth.js avec JWT
-- **UI** : React 19, TypeScript, CSS Modules
-- **Visualisation** : Recharts pour graphiques radar
-- **Base de données** : Prisma ORM + PostgreSQL
+- **Framework**: Next.js 15.5.3 (App Router)
+- **Authentication**: NextAuth.js with JWT
+- **UI**: React 19, TypeScript, CSS Modules
+- **Visualization**: Recharts for radar charts
+- **Database**: Prisma ORM + PostgreSQL
 
 ### Backend (`urroom-api/`)
-- **Runtime** : Node.js + Express.js
-- **Base de données** : Prisma ORM + PostgreSQL
-- **Authentification** : bcryptjs
-- **Import de données** : Support CSV
-- **API RESTful** : Endpoints complets pour toutes les entités
+- **Runtime**: Node.js + Express.js
+- **Database**: Prisma ORM + PostgreSQL
+- **Authentication**: bcryptjs
+- **Data Import**: CSV support
+- **RESTful API**: Complete endpoints for all entities
 
-### Base de données
-- **ORM** : Prisma 6.16.1
-- **BDD** : PostgreSQL
-- **Modèles** :
-  - Users (5 rôles : ADMIN, CLUB, SCOUT, AGENT, PLAYER)
+### Database
+- **ORM**: Prisma 6.16.1
+- **DB**: PostgreSQL
+- **Models**:
+  - Users (5 roles: ADMIN, CLUB, SCOUT, AGENT, PLAYER)
   - Players
-  - Assessments (avec métriques : Vitesse, Dribble, Tir, Passe, Défense, Physique, Contrôle, Vision)
-  - PlayerFollow (système de suivi scout)
+  - Assessments (with metrics: Speed, Dribbling, Shooting, Passing, Defense, Physical, Control, Vision)
+  - PlayerFollow (scout tracking system)
   - Reports
   - Trials
   - Shortlists
 
 ## 🚀 Installation
 
-### Prérequis
-- Node.js 18+ et npm
+### Prerequisites
+- Node.js 18+ and npm
 - PostgreSQL
 - Git
 
-### Étapes
+### Steps
 
-1. **Cloner le repository**
+1. **Clone the repository**
 ```bash
 git clone https://github.com/steven-eklou-vinci/uroom-sport-analytics.git
 cd uroom-sport-analytics
 ```
 
-2. **Installer les dépendances du backend**
+2. **Install backend dependencies**
 ```bash
 cd urroom-api
 npm install
 ```
 
-3. **Installer les dépendances du frontend**
+3. **Install frontend dependencies**
 ```bash
 cd ../urroom-sports-analytics
 npm install
 ```
 
-4. **Configurer les bases de données** (voir section Configuration)
+4. **Configure databases** (see Configuration section)
 
-5. **Lancer les migrations Prisma**
+5. **Run Prisma migrations**
 ```bash
 # Backend
 cd urroom-api
@@ -125,7 +125,7 @@ cd ../urroom-sports-analytics
 npx prisma generate
 ```
 
-6. **Seed la base de données** (optionnel - données de test)
+6. **Seed the database** (optional - test data)
 ```bash
 cd urroom-api
 npx ts-node prisma/seed.ts
@@ -133,7 +133,7 @@ npx ts-node prisma/seed.ts
 
 ## ⚙️ Configuration
 
-### Variables d'environnement
+### Environment Variables
 
 #### Backend (`urroom-api/.env`)
 ```env
@@ -150,162 +150,162 @@ NEXTAUTH_SECRET="your-nextauth-secret-here"
 API_URL="http://localhost:4000"
 ```
 
-### Génération des secrets
+### Generating secrets
 ```bash
-# Pour JWT_SECRET et NEXTAUTH_SECRET
+# For JWT_SECRET and NEXTAUTH_SECRET
 openssl rand -base64 32
 ```
 
-## 📱 Utilisation
+## 📱 Usage
 
-### Démarrage en développement
+### Starting in development mode
 
-**Terminal 1 - Backend :**
+**Terminal 1 - Backend:**
 ```bash
 cd urroom-api
 npm run dev
 ```
-Le backend sera accessible sur `http://localhost:4000`
+Backend will be accessible at `http://localhost:4000`
 
-**Terminal 2 - Frontend :**
+**Terminal 2 - Frontend:**
 ```bash
 cd urroom-sports-analytics
 npm run dev
 ```
-Le frontend sera accessible sur `http://localhost:3000`
+Frontend will be accessible at `http://localhost:3000`
 
-### Comptes de test (après seed)
+### Test accounts (after seeding)
 
-**Scout 1 :**
-- Email : `scout1@parisfc.com`
-- Mot de passe : `scout123`
+**Scout 1:**
+- Email: `scout1@parisfc.com`
+- Password: `scout123`
 
-**Scout 2 :**
-- Email : `scout2@parisfc.com`
-- Mot de passe : `scout123`
+**Scout 2:**
+- Email: `scout2@parisfc.com`
+- Password: `scout123`
 
-**Club :**
-- Email : `club@parisfc.com`
-- Mot de passe : `club123`
+**Club:**
+- Email: `club@parisfc.com`
+- Password: `club123`
 
-## 📂 Structure du projet
+## 📂 Project Structure
 
 ```
 uroom-sport-analytics/
-├── urroom-api/                    # Backend Express
+├── urroom-api/                    # Express Backend
 │   ├── prisma/
-│   │   ├── schema.prisma         # Schéma de la base de données
-│   │   ├── seed.ts               # Données de test
-│   │   └── migrations/           # Historique des migrations
+│   │   ├── schema.prisma         # Database schema
+│   │   ├── seed.ts               # Test data
+│   │   └── migrations/           # Migration history
 │   ├── src/
-│   │   ├── index.js              # Point d'entrée
-│   │   └── routes/               # Routes API
+│   │   ├── index.js              # Entry point
+│   │   └── routes/               # API routes
 │   └── package.json
 │
-└── urroom-sports-analytics/       # Frontend Next.js
+└── urroom-sports-analytics/       # Next.js Frontend
     ├── prisma/
-    │   └── schema.prisma         # Schéma Prisma (même que backend)
+    │   └── schema.prisma         # Prisma schema (same as backend)
     ├── src/
-    │   ├── app/                  # App Router Next.js
-    │   │   ├── auth/            # Pages d'authentification
-    │   │   ├── dashboard/       # Dashboards par rôle
-    │   │   │   ├── scout/       # Interface Scout
-    │   │   │   ├── club/        # Interface Club
-    │   │   │   └── players/     # Gestion des joueurs
-    │   │   ├── components/      # Composants réutilisables
-    │   │   └── locales/         # Internationalisation (FR/EN)
-    │   ├── pages/api/           # API Routes Next.js
-    │   ├── lib/                 # Utilitaires
+    │   ├── app/                  # Next.js App Router
+    │   │   ├── auth/            # Authentication pages
+    │   │   ├── dashboard/       # Role-based dashboards
+    │   │   │   ├── scout/       # Scout interface
+    │   │   │   ├── club/        # Club interface
+    │   │   │   └── players/     # Player management
+    │   │   ├── components/      # Reusable components
+    │   │   └── locales/         # Internationalization (FR/EN)
+    │   ├── pages/api/           # Next.js API Routes
+    │   ├── lib/                 # Utilities
     │   └── middleware/          # Middlewares (auth)
     └── package.json
 ```
 
 ## 🔌 API
 
-### Endpoints principaux
+### Main Endpoints
 
-#### Authentification
-- `POST /api/auth/login` - Connexion
-- `POST /api/auth/register` - Inscription
+#### Authentication
+- `POST /api/auth/login` - Login
+- `POST /api/auth/register` - Registration
 
 #### Players
-- `GET /api/players` - Liste des joueurs
-- `GET /api/players/:id` - Détails d'un joueur
-- `POST /api/players` - Créer un joueur
-- `GET /api/players/with-follow-status` - Joueurs avec statut de suivi (scouts)
+- `GET /api/players` - List of players
+- `GET /api/players/:id` - Player details
+- `POST /api/players` - Create a player
+- `GET /api/players/with-follow-status` - Players with follow status (scouts)
 
 #### Player Follow (Scouts)
-- `POST /api/players/follow/:id` - Suivre un joueur
-- `DELETE /api/players/follow/:id` - Ne plus suivre
-- `GET /api/players/following` - Liste des joueurs suivis
-- `GET /api/players/:id/follow-info` - Info de suivi d'un joueur
+- `POST /api/players/follow/:id` - Follow a player
+- `DELETE /api/players/follow/:id` - Unfollow
+- `GET /api/players/following` - List of followed players
+- `GET /api/players/:id/follow-info` - Player follow information
 
 #### Reports
-- `GET /api/reports` - Liste des rapports
-- `POST /api/reports` - Créer un rapport
-- `GET /api/reports/:id` - Détails d'un rapport
-- `GET /api/reports/:id/export-pdf` - Exporter en PDF
+- `GET /api/reports` - List of reports
+- `POST /api/reports` - Create a report
+- `GET /api/reports/:id` - Report details
+- `GET /api/reports/:id/export-pdf` - Export to PDF
 
 #### Scouts
-- `GET /api/scouts` - Liste des scouts (pour clubs)
-- `POST /api/scouts/create` - Créer un scout
-- `GET /api/scouts/dashboard` - Données du dashboard scout
+- `GET /api/scouts` - List of scouts (for clubs)
+- `POST /api/scouts/create` - Create a scout
+- `GET /api/scouts/dashboard` - Scout dashboard data
 
 #### Clubs
-- `GET /api/clubs` - Liste des clubs
-- `GET /api/clubs/:id` - Détails d'un club
+- `GET /api/clubs` - List of clubs
+- `GET /api/clubs/:id` - Club details
 
 #### Assessments
-- `GET /api/assessments` - Liste des évaluations
-- `POST /api/assessments` - Créer une évaluation
-- `POST /api/assessments/upload-video` - Upload de vidéo
+- `GET /api/assessments` - List of assessments
+- `POST /api/assessments` - Create an assessment
+- `POST /api/assessments/upload-video` - Video upload
 
-## 🎨 Fonctionnalités avancées
+## 🎨 Advanced Features
 
-### Système de prédictions IA
-- Algorithme de prédiction basé sur l'âge et la progression naturelle
-- Projection sur 5 ans (2025-2029)
-- 8 métriques analysées : Vitesse, Dribble, Tir, Passe, Défense, Physique, Contrôle, Vision
-- Facteurs de croissance personnalisés par métrique
+### AI Prediction System
+- Prediction algorithm based on age and natural progression
+- 5-year projection (2025-2029)
+- 8 analyzed metrics: Speed, Dribbling, Shooting, Passing, Defense, Physical, Control, Vision
+- Personalized growth factors per metric
 
-### Badges collaboratifs
-- Affichage en temps réel des scouts suivant le même joueur
-- Identification par nom et email
-- Compteur de collègues intéressés
-- Favorise la collaboration intra-club
+### Collaborative Badges
+- Real-time display of scouts following the same player
+- Identification by name and email
+- Counter of interested colleagues
+- Promotes intra-club collaboration
 
-### Graphiques Radar
-- Visualisation des 8 métriques principales
-- Comparaison année par année
-- Affichage des prédictions futures
-- Interface interactive avec Recharts
+### Radar Charts
+- Visualization of 8 main metrics
+- Year-by-year comparison
+- Display of future predictions
+- Interactive interface with Recharts
 
-## 🤝 Contribution
+## 🤝 Contributing
 
-Les contributions sont les bienvenues ! Pour contribuer :
+Contributions are welcome! To contribute:
 
-1. Fork le projet
-2. Créer une branche (`git checkout -b feature/AmazingFeature`)
-3. Commit vos changements (`git commit -m 'Add AmazingFeature'`)
-4. Push vers la branche (`git push origin feature/AmazingFeature`)
-5. Ouvrir une Pull Request
+1. Fork the project
+2. Create a branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## 📄 Licence
+## 📄 License
 
-Ce projet est la propriété de Uroom Sports Analytics. Tous droits réservés.
+This project is the property of Uroom Sports Analytics. All rights reserved.
 
-## 👤 Auteur
+## 👤 Author
 
 **Steven Eklou**
 - GitHub: [@steven-eklou-vinci](https://github.com/steven-eklou-vinci)
 
-## 🙏 Remerciements
+## 🙏 Acknowledgments
 
-- Next.js pour le framework frontend
-- Prisma pour l'ORM
-- Recharts pour les visualisations
-- La communauté open source
+- Next.js for the frontend framework
+- Prisma for the ORM
+- Recharts for visualizations
+- The open source community
 
 ---
 
-**Développé avec ❤️ pour révolutionner le recrutement sportif**
+**Developed with ❤️ to revolutionize sports recruitment**

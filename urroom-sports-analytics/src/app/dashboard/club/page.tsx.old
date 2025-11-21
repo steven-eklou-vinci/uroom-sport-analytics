@@ -1,0 +1,396 @@
+"use client";
+import React, { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import styles from './ClubDashboard.module.css';
+
+interface Scout {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+  reportsCount: number;
+}
+
+interface Report {
+  id: string;
+  playerName: string;
+  scoutName: string;
+  summary: string;
+  createdAt: string;
+}
+
+export default function ClubDashboard() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [stats, setStats] = useState({ scouts: 0, reports: 0, trials: 0 });
+  const [scouts, setScouts] = useState<Scout[]>([]);
+  const [recentReports, setRecentReports] = useState<Report[]>([]);
+  const [showAddScout, setShowAddScout] = useState(false);
+  const [newScout, setNewScout] = useState({ name: '', email: '', password: '' });
+
+  const handleDisableScout = async (scoutId: string) => {
+    if (!confirm('Voulez-vous vraiment désactiver ce scout ?')) return;
+    
+    try {
+      const res = await fetch('/api/scouts', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scoutId })
+      });
+
+      if (res.ok) {
+        alert('Scout désactivé avec succès');
+        fetchDashboardData();
+      } else {
+        const error = await res.json();
+        alert(`Erreur: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Erreur désactivation scout:', error);
+      alert('Erreur lors de la désactivation');
+    }
+  };
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/login');
+    }
+    if (session?.user?.role !== 'CLUB' && session?.user?.role !== 'ADMIN') {
+      router.push('/dashboard/overview');
+    }
+  }, [session, status, router]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      // Fetch scouts
+      const scoutsRes = await fetch('/api/scouts');
+      if (scoutsRes.ok) {
+        const scoutsData = await scoutsRes.json();
+        setScouts(scoutsData);
+        setStats(prev => ({ ...prev, scouts: scoutsData.length }));
+      }
+
+      // TODO: Fetch reports and trials
+      setRecentReports([
+        { id: '1', playerName: 'Kylian Mbappé', scoutName: 'Jean Dupont', summary: 'Excellent attaquant...', createdAt: '2025-11-20' },
+      ]);
+    } catch (error) {
+      console.error('Erreur fetch:', error);
+    }
+  };
+
+  const handleAddScout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/scouts/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newScout)
+      });
+
+      if (res.ok) {
+        alert('Scout créé avec succès ! Les identifiants ont été envoyés.');
+        setShowAddScout(false);
+        setNewScout({ name: '', email: '', password: '' });
+        fetchDashboardData();
+      } else {
+        const error = await res.json();
+        alert(`Erreur: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Erreur création scout:', error);
+      alert('Erreur lors de la création du scout');
+    }
+  };
+
+  if (status === 'loading') return <div className={styles.loading}>Chargement...</div>;
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h1 className={styles.title}>Tableau de bord Club</h1>
+        <div className={styles.subscription}>
+          <span className={styles.subscriptionLabel}>Abonnement:</span> Premium
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div className={styles.statsGrid}>
+        <div className={styles.statCard}>
+          <div className={styles.statLabel}>Scouts actifs</div>
+          <div className={styles.statValue}>{stats.scouts}</div>
+        </div>
+        <div className={styles.statCard}>
+          <div className={styles.statLabel}>Rapports reçus</div>
+          <div className={styles.statValue}>{stats.reports}</div>
+        </div>
+        <div className={styles.statCard}>
+          <div className={styles.statLabel}>Demandes d'essai</div>
+          <div className={styles.statValue}>{stats.trials}</div>
+        </div>
+      </div>
+
+      {/* Gestion des scouts */}
+      <div className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Mes scouts</h2>
+          <button
+            onClick={() => setShowAddScout(!showAddScout)}
+            className={styles.addButton}
+          >
+            + Ajouter un scout
+          </button>
+        </div>
+              boxShadow: '0 2px 8px rgba(20,184,166,0.3)'
+            }}
+          >
+            ➕ Ajouter un scout
+          </button>
+        </div>
+
+        {showAddScout && (
+          <form onSubmit={handleAddScout} style={{ background: '#0F172A', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>Nouveau scout</h3>
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Nom complet</label>
+                <input
+                  type="text"
+                  required
+                  value={newScout.name}
+                  onChange={(e) => setNewScout({ ...newScout, name: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    borderRadius: '6px',
+                    border: '1px solid #334155',
+                    background: '#1E293B',
+                    color: '#fff'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Email</label>
+                <input
+                  type="email"
+                  required
+                  value={newScout.email}
+                  onChange={(e) => setNewScout({ ...newScout, email: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    borderRadius: '6px',
+                    border: '1px solid #334155',
+                    background: '#1E293B',
+                    color: '#fff'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Mot de passe initial</label>
+                <input
+                  type="password"
+                  required
+                  value={newScout.password}
+                  onChange={(e) => setNewScout({ ...newScout, password: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    borderRadius: '6px',
+                    border: '1px solid #334155',
+                    background: '#1E293B',
+                    color: '#fff'
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button
+                  type="submit"
+                  style={{
+                    background: '#14B8A6',
+                    color: '#fff',
+                    padding: '0.5rem 1.5rem',
+                    borderRadius: '6px',
+                    border: 'none',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Créer le compte
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddScout(false)}
+                  style={{
+                    background: '#475569',
+                    color: '#fff',
+                    padding: '0.5rem 1.5rem',
+                    borderRadius: '6px',
+                    border: 'none',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', fontSize: '0.875rem', color: '#fff' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #334155' }}>
+                <th style={{ padding: '0.75rem', textAlign: 'left', color: '#94A3B8' }}>Nom</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', color: '#94A3B8' }}>Email</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', color: '#94A3B8' }}>Rapports</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', color: '#94A3B8' }}>Membre depuis</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', color: '#94A3B8' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {scouts.map((scout) => (
+                <tr key={scout.id} style={{ borderBottom: '1px solid #334155' }}>
+                  <td style={{ padding: '0.75rem' }}>{scout.name}</td>
+                  <td style={{ padding: '0.75rem', color: '#94A3B8' }}>{scout.email}</td>
+                  <td style={{ padding: '0.75rem' }}><span style={{ color: '#14B8A6', fontWeight: 600 }}>{scout.reportsCount}</span></td>
+                  <td style={{ padding: '0.75rem', color: '#94A3B8' }}>{new Date(scout.createdAt).toLocaleDateString('fr-FR')}</td>
+                  <td style={{ padding: '0.75rem' }}>
+                    <button
+                      onClick={() => handleDisableScout(scout.id)}
+                      style={{
+                        background: '#475569',
+                        color: '#fff',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '4px',
+                        border: 'none',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Désactiver
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Rapports récents des scouts */}
+      <div style={{ background: '#1E293B', padding: '2rem', borderRadius: '8px', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff' }}>Rapports de mes scouts</h2>
+          <Link href="/dashboard/reports" style={{ textDecoration: 'none' }}>
+            <button style={{
+              background: '#334155',
+              color: '#fff',
+              padding: '0.5rem 1rem',
+              borderRadius: '6px',
+              border: 'none',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontSize: '0.875rem'
+            }}>
+              Voir tous les rapports →
+            </button>
+          </Link>
+        </div>
+
+        {recentReports.length === 0 ? (
+          <p style={{ color: '#94A3B8', textAlign: 'center', padding: '2rem' }}>
+            Aucun rapport pour le moment. Vos scouts pourront créer des rapports une fois leurs comptes activés.
+          </p>
+        ) : (
+          <div style={{ display: 'grid', gap: '1rem' }}>
+            {recentReports.map((report) => (
+              <div
+                key={report.id}
+                style={{
+                  background: '#0F172A',
+                  padding: '1rem',
+                  borderRadius: '8px',
+                  border: '1px solid #334155'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
+                      {report.playerName}
+                    </h3>
+                    <p style={{ fontSize: '0.875rem', color: '#94A3B8' }}>
+                      Par <strong style={{ color: '#14B8A6' }}>{report.scoutName}</strong> • {new Date(report.createdAt).toLocaleDateString('fr-FR')}
+                    </p>
+                  </div>
+                  <Link href={`/dashboard/reports/${report.id}`} style={{ textDecoration: 'none' }}>
+                    <button style={{
+                      background: '#14B8A6',
+                      color: '#fff',
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '4px',
+                      border: 'none',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}>
+                      Voir →
+                    </button>
+                  </Link>
+                </div>
+                <p style={{ fontSize: '0.875rem', color: '#94A3B8' }}>
+                  {report.summary.substring(0, 150)}...
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Actions rapides */}
+      <div style={{ background: '#1E293B', padding: '2rem', borderRadius: '8px' }}>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#fff' }}>Actions rapides</h2>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <Link href="/dashboard/players/search" style={{ textDecoration: 'none' }}>
+            <button style={{
+              background: '#14B8A6',
+              color: '#fff',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '6px',
+              border: 'none',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              boxShadow: '0 2px 8px rgba(20,184,166,0.3)'
+            }}>
+              🔍 Rechercher des joueurs
+            </button>
+          </Link>
+          <Link href="/dashboard/trials" style={{ textDecoration: 'none' }}>
+            <button style={{
+              background: '#0F766E',
+              color: '#fff',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '6px',
+              border: 'none',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              boxShadow: '0 2px 8px rgba(15,118,110,0.3)'
+            }}>
+              🎯 Gérer les essais
+            </button>
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+

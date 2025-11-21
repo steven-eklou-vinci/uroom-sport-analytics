@@ -1,0 +1,396 @@
+.container {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+.backBtn {
+  background: #334155;
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.backBtn:hover {
+  background: #475569;
+}
+
+/* Search Bar */
+.searchBar {
+  background: #1e293b;
+  padding: 1rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  border: 1px solid #334155;
+}
+
+.searchBar svg {
+  width: 20px;
+  height: 20px;
+  color: #64748b;
+  stroke-width: 2;
+}
+
+.searchBar input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.searchBar input::placeholder {
+  color: #64748b;
+}
+
+/* Players Grid */
+.playersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.playerCard {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.playerCard:hover {
+  border-color: #14b8a6;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(20, 184, 166, 0.2);
+}
+
+/* Badge */
+.badge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.badge svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+}
+
+/* Player Link */
+.playerLink {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: opacity 0.2s;
+}
+
+.playerLink:hover {
+  opacity: 0.9;
+}
+
+.playerLink:hover .playerHeader {
+  transform: translateX(4px);
+}
+
+/* Player Header */
+.playerHeader {
+  display: flex;
+  align-items: start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-top: 1rem;
+  transition: transform 0.2s;
+}
+
+.playerPhoto {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #14b8a6;
+  flex-shrink: 0;
+}
+
+.playerPhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photoPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #14b8a6 0%, #0f766e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.playerInfo h3 {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.playerMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+.age {
+  color: #14b8a6;
+  font-weight: 600;
+}
+
+.separator {
+  color: #475569;
+}
+
+.nationality {
+  color: #cbd5e1;
+}
+
+/* Player Details */
+.playerDetails {
+  background: #0f172a;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  border: 1px solid #1e293b;
+}
+
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #1e293b;
+}
+
+.detailRow:last-child {
+  border-bottom: none;
+}
+
+.label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.value {
+  font-size: 0.875rem;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Notes */
+.notes {
+  background: #0f172a;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  border: 1px solid #1e293b;
+}
+
+.notesLabel {
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.notesContent {
+  font-size: 0.875rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+/* Actions */
+.actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem;
+}
+
+.createReportBtn {
+  background: linear-gradient(135deg, #14b8a6 0%, #0f766e 100%);
+  color: #fff;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(20, 184, 166, 0.3);
+}
+
+.createReportBtn svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+
+.createReportBtn:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 16px rgba(20, 184, 166, 0.4);
+}
+
+.unfollowBtn {
+  background: #ef4444;
+  color: #fff;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.unfollowBtn svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+
+.unfollowBtn:hover {
+  background: #dc2626;
+  transform: scale(1.05);
+}
+
+/* Empty State */
+.emptyState {
+  background: #1e293b;
+  padding: 4rem 2rem;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid #334155;
+}
+
+.emptyState svg {
+  width: 64px;
+  height: 64px;
+  color: #64748b;
+  stroke-width: 1.5;
+  margin: 0 auto 1.5rem;
+}
+
+.emptyState h3 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.emptyState p {
+  font-size: 1rem;
+  color: #94a3b8;
+  margin-bottom: 2rem;
+}
+
+.searchPlayersBtn {
+  background: linear-gradient(135deg, #14b8a6 0%, #0f766e 100%);
+  color: #fff;
+  padding: 0.875rem 1.5rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(20, 184, 166, 0.3);
+}
+
+.searchPlayersBtn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(20, 184, 166, 0.4);
+}
+
+/* Loading */
+.loading {
+  padding: 3rem;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 1.125rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .playersGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .badge {
+    position: static;
+    margin-bottom: 1rem;
+    width: fit-content;
+  }
+
+  .actions {
+    grid-template-columns: 1fr;
+  }
+}

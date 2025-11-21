@@ -1,0 +1,41 @@
+.footer {
+  background: #0F172A;
+  color: #F1F5F9;
+  padding: 1.5rem 1.5rem;
+  margin-top: 3rem;
+}
+
+.container {
+  max-width: 72rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.copyright {
+  font-size: 0.875rem;
+}
+
+.links {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.link {
+  color: #F1F5F9;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.link:hover {
+  color: #14B8A6;
+}
+
+@media (min-width: 768px) {
+  .container {
+    flex-direction: row;
+  }
+}

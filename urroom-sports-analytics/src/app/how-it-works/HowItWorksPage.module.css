@@ -1,0 +1,30 @@
+.howItWorksSection {
+  width: 100%;
+  background: #fff;
+  padding: 4rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 60vh;
+}
+
+.title {
+  color: #0F172A;
+  font-size: 2rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.list {
+  color: #1E293B;
+  font-size: 1.125rem;
+  margin-bottom: 2rem;
+  list-style: decimal inside;
+  padding: 0;
+}
+.list li {
+  margin-bottom: 1rem;
+}

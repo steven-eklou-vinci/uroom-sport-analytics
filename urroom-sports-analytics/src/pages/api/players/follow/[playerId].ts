@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
-import { prisma } from '../../../../lib/prisma';
+import { prisma } from '@/lib/prisma';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions);
@@ -14,17 +14,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(403).json({ message: 'Accès interdit' });
   }
 
-  const { id } = req.query;
+  const { playerId } = req.query;
 
-  if (!id || typeof id !== 'string') {
-    return res.status(400).json({ message: 'ID manquant' });
+  if (!playerId || typeof playerId !== 'string') {
+    return res.status(400).json({ message: 'ID joueur manquant' });
   }
 
   const userId = session.user.id;
 
   try {
     if (req.method === 'POST') {
-      // Follow a player (id = playerId)
+      // Follow a player
       const { notes } = req.body;
 
       // Check if already following
@@ -32,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: {
           scoutId_playerId: {
             scoutId: userId,
-            playerId: id
+            playerId: playerId
           }
         }
       });
@@ -45,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const follow = await prisma.playerFollow.create({
         data: {
           scoutId: userId,
-          playerId: id,
+          playerId: playerId,
           notes: notes || null
         },
         include: {
@@ -64,42 +64,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
     } else if (req.method === 'DELETE') {
-      // Unfollow - can be either by playerId or by followId
-      // First try to find by followId (direct delete)
-      const followById = await prisma.playerFollow.findUnique({
-        where: { id: id }
-      });
-
-      if (followById) {
-        // Check ownership
-        if (followById.scoutId !== userId) {
-          return res.status(403).json({ message: 'Vous ne pouvez pas supprimer ce suivi' });
-        }
-
-        await prisma.playerFollow.delete({
-          where: { id: id }
-        });
-
-        return res.status(200).json({ message: 'Suivi supprimé avec succès' });
-      }
-
-      // If not found by followId, try by playerId
-      const followByPlayerId = await prisma.playerFollow.findUnique({
+      // Unfollow a player
+      const follow = await prisma.playerFollow.findUnique({
         where: {
           scoutId_playerId: {
             scoutId: userId,
-            playerId: id
+            playerId: playerId
           }
         }
       });
 
-      if (!followByPlayerId) {
+      if (!follow) {
         return res.status(404).json({ message: 'Vous ne suivez pas ce joueur' });
       }
 
       await prisma.playerFollow.delete({
         where: {
-          id: followByPlayerId.id
+          id: follow.id
         }
       });
 

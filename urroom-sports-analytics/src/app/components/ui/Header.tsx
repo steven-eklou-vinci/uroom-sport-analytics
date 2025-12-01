@@ -293,6 +293,16 @@ export default function Header() {
           )
         },
         {
+          label: 'Mes vidéos',
+          href: '/dashboard/player/videos',
+          icon: (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="2" y="4" width="12" height="8" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M7 6L10 8L7 10V6Z" fill="currentColor"/>
+            </svg>
+          )
+        },
+        {
           label: 'Mes évaluations',
           href: '/dashboard/assessments',
           icon: (

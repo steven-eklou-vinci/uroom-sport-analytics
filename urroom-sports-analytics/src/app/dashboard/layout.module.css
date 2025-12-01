@@ -5,15 +5,37 @@
   width: 100%;
   margin: 0;
   padding: 0;
-  background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  background: linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 50%, #0f1419 100%);
+  position: relative;
+}
+
+.dashboardContainer::before {
+  content: '';
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60%;
+  max-width: 600px;
+  height: 60%;
+  max-height: 600px;
+  background-image: url('/icon_uroomAnalytics.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .mainContent {
   flex: 1;
   padding: 2rem;
   width: 100%;
-  min-height: calc(100vh - 72px);
   box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+  background: transparent;
 }
 
 /* Responsive adjustments */

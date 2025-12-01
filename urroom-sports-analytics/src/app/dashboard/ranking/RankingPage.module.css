@@ -1,0 +1,341 @@
+.container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0;
+  box-sizing: border-box;
+  background: transparent;
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(20, 184, 166, 0.2);
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #fff;
+  margin: 0 0 0.5rem 0;
+}
+
+.subtitle {
+  font-size: 0.875rem;
+  color: #94A3B8;
+  margin: 0;
+}
+
+.userRankCard {
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.15), rgba(20, 184, 166, 0.05));
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  border: 2px solid rgba(20, 184, 166, 0.3);
+  text-align: center;
+}
+
+.userRankLabel {
+  font-size: 0.75rem;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.userRankValue {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #14B8A6;
+}
+
+.filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.searchBox {
+  flex: 1;
+  min-width: 300px;
+}
+
+.searchInput {
+  width: 100%;
+  background: #1E293B;
+  border: 1px solid rgba(20, 184, 166, 0.3);
+  color: #fff;
+  padding: 0.875rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: #14B8A6;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
+}
+
+.searchInput::placeholder {
+  color: #64748B;
+}
+
+.filterSelect {
+  background: #1E293B;
+  border: 1px solid rgba(20, 184, 166, 0.3);
+  color: #fff;
+  padding: 0.875rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 200px;
+}
+
+.filterSelect:focus {
+  outline: none;
+  border-color: #14B8A6;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
+}
+
+.clearButton {
+  background: rgba(239, 68, 68, 0.1);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 0.875rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clearButton:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #EF4444;
+}
+
+.resultsInfo {
+  margin-bottom: 1rem;
+  color: #94A3B8;
+  font-size: 0.875rem;
+}
+
+.tableContainer {
+  background: #1E293B;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(20, 184, 166, 0.1);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableHeader {
+  background: rgba(20, 184, 166, 0.1);
+  border-bottom: 2px solid rgba(20, 184, 166, 0.3);
+}
+
+.tableHeader th {
+  text-align: left;
+  padding: 1rem;
+  color: #14B8A6;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rankColumn {
+  width: 100px;
+}
+
+.scoreColumn {
+  width: 120px;
+  text-align: center !important;
+}
+
+.tableRow {
+  border-bottom: 1px solid rgba(20, 184, 166, 0.1);
+  transition: all 0.2s;
+}
+
+.tableRow:hover {
+  background: rgba(20, 184, 166, 0.05);
+}
+
+.tableRow td {
+  padding: 1rem;
+  color: #E2E8F0;
+  font-size: 0.875rem;
+}
+
+.rank1 {
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.1), transparent);
+}
+
+.rank2 {
+  background: linear-gradient(90deg, rgba(192, 192, 192, 0.1), transparent);
+}
+
+.rank3 {
+  background: linear-gradient(90deg, rgba(205, 127, 50, 0.1), transparent);
+}
+
+.rankTop10 {
+  background: linear-gradient(90deg, rgba(20, 184, 166, 0.05), transparent);
+}
+
+.currentUser {
+  background: linear-gradient(90deg, rgba(20, 184, 166, 0.15), transparent) !important;
+  border-left: 3px solid #14B8A6;
+}
+
+.rankCell {
+  font-weight: 600;
+}
+
+.rankBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.medal {
+  font-size: 1.25rem;
+}
+
+.rankNumber {
+  color: #14B8A6;
+  font-size: 1.125rem;
+  font-weight: bold;
+}
+
+.nameCell {
+  font-weight: 600;
+}
+
+.playerInfo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.playerPhotoSmall {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(20, 184, 166, 0.3);
+  flex-shrink: 0;
+}
+
+.photoImageSmall {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.playerName {
+  color: #fff;
+  font-size: 0.9375rem;
+}
+
+.positions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.positionTag {
+  background: rgba(20, 184, 166, 0.15);
+  color: #14B8A6;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.positionMore {
+  color: #64748B;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.scoreCell {
+  text-align: center;
+}
+
+.scoreValue {
+  display: inline-block;
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.2), rgba(20, 184, 166, 0.1));
+  color: #14B8A6;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1.125rem;
+  border: 1px solid rgba(20, 184, 166, 0.3);
+}
+
+.emptyState {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.emptyState h3 {
+  color: #E2E8F0;
+  margin-bottom: 0.5rem;
+}
+
+.emptyState p {
+  color: #94A3B8;
+}
+
+.loading {
+  padding: 4rem 2rem;
+  color: #fff;
+  text-align: center;
+  font-size: 1.125rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .filters {
+    flex-direction: column;
+  }
+
+  .searchBox {
+    min-width: 100%;
+  }
+
+  .filterSelect {
+    width: 100%;
+  }
+
+  .table {
+    font-size: 0.8125rem;
+  }
+
+  .tableHeader th,
+  .tableRow td {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .medal {
+    display: none;
+  }
+}

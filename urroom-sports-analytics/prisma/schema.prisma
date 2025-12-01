@@ -57,6 +57,9 @@ model PlayerProfile {
   userId        String?
   createdAt     DateTime          @default(now())
   positions     String[]
+  uroomScore    Float?            @default(0)
+  uroomRank     Int?
+  profileViews  Int               @default(0)
   assessments   Assessment[]
   user          User?             @relation(fields: [userId], references: [id])
   reports       Report[]

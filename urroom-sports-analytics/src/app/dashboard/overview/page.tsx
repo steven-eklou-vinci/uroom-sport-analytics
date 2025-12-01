@@ -22,7 +22,7 @@ export default function DashboardOverview() {
       'CLUB': '/dashboard/club',
       'SCOUT': '/dashboard/scout',
       'AGENT': '/dashboard/agent',
-      'PLAYER': '/dashboard/players'
+      'PLAYER': '/dashboard/player'
     };
 
     const redirectPath = session.user?.role ? roleMap[session.user.role] : '/dashboard/club';

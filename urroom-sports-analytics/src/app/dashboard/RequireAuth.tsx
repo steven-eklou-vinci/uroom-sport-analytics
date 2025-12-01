@@ -14,9 +14,9 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
       return;
     }
     // RBAC : Redirection selon le rôle et la route
-    // Exemples de règles (à adapter selon les besoins)
     const path = window.location.pathname;
     const role = session.user.role;
+    
     // Admin uniquement
     if (path.startsWith('/dashboard/admin') && role !== 'ADMIN') {
       router.replace('/dashboard/overview');
@@ -34,18 +34,23 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
     }
     // Joueurs : admin, scout, club
     if (path.startsWith('/dashboard/players') && role === 'PLAYER') {
-      router.replace('/dashboard/overview');
+      router.replace('/dashboard/player');
       return;
     }
-    // Évaluations, rapports, shortlists, trials : admin, scout, club
-    if ((path.startsWith('/dashboard/assessments') || path.startsWith('/dashboard/reports') || path.startsWith('/dashboard/shortlists') || path.startsWith('/dashboard/trials')) && role === 'PLAYER') {
-      router.replace('/dashboard/overview');
+    // Évaluations, rapports, shortlists, trials : selon le rôle
+    if ((path.startsWith('/dashboard/assessments') || path.startsWith('/dashboard/shortlists')) && role === 'PLAYER') {
+      router.replace('/dashboard/player');
       return;
     }
-    // Les joueurs n'ont accès qu'à overview
-    if (path.startsWith('/dashboard') && role === 'PLAYER' && path !== '/dashboard/overview') {
-      router.replace('/dashboard/overview');
-      return;
+    
+    // Les joueurs ont accès à /dashboard/player, /dashboard/profile, /dashboard/reports, /dashboard/trials
+    if (path.startsWith('/dashboard') && role === 'PLAYER') {
+      const allowedPaths = ['/dashboard/player', '/dashboard/profile', '/dashboard/reports', '/dashboard/trials', '/dashboard/overview'];
+      const isAllowed = allowedPaths.some(allowed => path.startsWith(allowed));
+      if (!isAllowed) {
+        router.replace('/dashboard/player');
+        return;
+      }
     }
   }, [session, status, router]);
 

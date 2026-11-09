@@ -1,4 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '../../../lib/prisma';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -13,6 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    const session = await getServerSession(req, res, authOptions);
     // Récupérer le joueur avec ses informations complètes
     const playerProfile = await prisma.playerProfile.findUnique({
       where: { id: id },
@@ -25,6 +28,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           include: {
             metrics: true,
           },
+        },
+        matchAppearances: {
+          where: { associationConfirmed: true },
+          include: {
+            match: {
+              select: {
+                id: true,
+                title: true,
+                opponent: true,
+                matchDate: true,
+                createdAt: true,
+                createdById: true,
+              },
+            },
+            statistics: true,
+          },
+          orderBy: { match: { createdAt: 'desc' } },
         },
       },
     });
@@ -60,8 +80,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       firstName: playerProfile.firstName,
       lastName: playerProfile.lastName,
       photoUrl: playerProfile.photoUrl,
-      birthDate: playerProfile.birthDate.toISOString(),
-      age: calculateAge(playerProfile.birthDate),
+      birthDate: playerProfile.birthDate?.toISOString() || null,
+      age: playerProfile.birthDate
+        ? calculateAge(playerProfile.birthDate)
+        : playerProfile.age,
       nationality: playerProfile.nationality,
       positions: playerProfile.positions,
       foot: playerProfile.foot,
@@ -71,6 +93,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       uroomRank: playerProfile.uroomRank || 999,
       videoUrls: playerProfile.videoUrls || [],
       metrics,
+      matchAppearances: playerProfile.matchAppearances
+        .filter((appearance) => {
+          if (session?.user?.role === 'ADMIN') return true;
+          if (session?.user?.role === 'SCOUT') {
+            return appearance.match.createdById === session.user.id;
+          }
+          return session?.user?.role === 'PLAYER' && playerProfile.userId === session.user.id;
+        })
+        .map((appearance) => ({
+          id: appearance.id,
+          trackId: appearance.trackId,
+          title: appearance.match.title,
+          opponent: appearance.match.opponent,
+          matchDate: appearance.match.matchDate?.toISOString() || null,
+          createdAt: appearance.match.createdAt.toISOString(),
+          statistics: appearance.statistics,
+        })),
     };
 
     return res.status(200).json(playerDetail);

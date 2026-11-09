@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from 'recharts';
+import Toast, { ToastType } from '../../../components/ui/Toast';
 import styles from './CreateReportPage.module.css';
 
 interface PlayerData {
@@ -48,6 +49,13 @@ function CreateReportContent() {
   const [weaknesses, setWeaknesses] = useState<string[]>([]);
   const [clubFit, setClubFit] = useState<string[]>([]);
   const [currentStrength, setCurrentStrength] = useState('');
+  
+  // Toast state
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+
+  const showToast = (message: string, type: ToastType = 'info') => {
+    setToast({ message, type });
+  };
   const [currentWeakness, setCurrentWeakness] = useState('');
   const [currentClubFit, setCurrentClubFit] = useState('');
 
@@ -76,8 +84,10 @@ function CreateReportContent() {
         const data = await res.json();
         setPlayer(data);
       } else {
-        alert('Joueur non trouvé');
-        router.push('/dashboard/players/search');
+        showToast('Joueur non trouvé', 'error');
+        setTimeout(() => {
+          router.push('/dashboard/players/search');
+        }, 2000);
       }
     } catch (error) {
       console.error('Erreur fetch player:', error);
@@ -165,12 +175,12 @@ function CreateReportContent() {
     e.preventDefault();
 
     if (!summary.trim()) {
-      alert('Veuillez saisir un résumé');
+      showToast('Veuillez saisir un résumé', 'warning');
       return;
     }
 
     if (strengths.length === 0 || weaknesses.length === 0) {
-      alert('Veuillez ajouter au moins un point fort et un point faible');
+      showToast('Veuillez ajouter au moins un point fort et un point faible', 'warning');
       return;
     }
 
@@ -193,15 +203,17 @@ function CreateReportContent() {
 
       if (res.ok) {
         const data = await res.json();
-        alert('Rapport créé avec succès !');
-        router.push(`/dashboard/reports/${data.id}`);
+        showToast('Rapport créé avec succès !', 'success');
+        setTimeout(() => {
+          router.push(`/dashboard/reports/${data.id}`);
+        }, 1500);
       } else {
         const error = await res.json();
-        alert(error.message || 'Erreur lors de la création du rapport');
+        showToast(error.message || 'Erreur lors de la création du rapport', 'error');
       }
     } catch (error) {
       console.error('Erreur submit report:', error);
-      alert('Erreur lors de la création du rapport');
+      showToast('Erreur lors de la création du rapport', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -435,6 +447,15 @@ function CreateReportContent() {
           </button>
         </div>
       </form>
+
+      {/* Toast notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

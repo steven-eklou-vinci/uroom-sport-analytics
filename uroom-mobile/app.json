@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "Uroom Sports Analytics",
+    "slug": "uroom-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/uroomAnalyticsLogo.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/icon_uroomAnalytics.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0E1A"
+    },
+    "extra": {
+      "apiUrl": "http://localhost:4000",
+      "aiUrl": "http://localhost:4100",
+      "webUrl": "http://localhost:3000"
+    },
+    "ios": {
+      "bundleIdentifier": "com.uroom.mobile",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow Uroom to capture match footage.",
+        "NSMicrophoneUsageDescription": "Allow Uroom to record audio notes.",
+        "NSPhotoLibraryUsageDescription": "Allow Uroom to access media for scouting clips."
+      }
+    },
+    "android": {
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#0A0E1A",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/uroomAnalyticsLogo.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-font"
+    ]
+  }
+}

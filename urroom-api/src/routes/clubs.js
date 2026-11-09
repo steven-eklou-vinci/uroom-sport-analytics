@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 router.get('/', async (req, res) => {
   try {
     const clubs = await prisma.club.findMany({
-      include: { users: true, shortlists: true }
+      include: { scouts: true, shortlists: true }
     });
     res.json(clubs);
   } catch (error) {
@@ -20,7 +20,7 @@ router.get('/:id', async (req, res) => {
   try {
     const club = await prisma.club.findUnique({
       where: { id: req.params.id },
-      include: { users: true, shortlists: true }
+      include: { scouts: true, shortlists: true }
     });
     if (!club) return res.status(404).json({ error: 'Club non trouvé' });
     res.json(club);

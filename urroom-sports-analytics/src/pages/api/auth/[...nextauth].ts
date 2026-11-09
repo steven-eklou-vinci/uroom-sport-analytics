@@ -1,8 +1,48 @@
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import GoogleProvider from 'next-auth/providers/google';
 import { prisma } from '../../../lib/prisma';
 import { compare } from 'bcryptjs';
+import { getFirebaseAdminAuth } from '../../../lib/firebase/admin';
+
+async function getOrCreatePrismaUserFromFirebase(idToken: string) {
+  const decoded = await getFirebaseAdminAuth().verifyIdToken(idToken);
+  if (!decoded.email) {
+    return null;
+  }
+
+  let user = await prisma.user.findUnique({
+    where: { email: decoded.email },
+  });
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        email: decoded.email,
+        name: decoded.name || decoded.email.split('@')[0],
+        role: 'PLAYER',
+        locale: 'fr',
+        oauthProvider: 'firebase',
+        oauthId: decoded.uid,
+      },
+    });
+  } else if (user.oauthProvider !== 'firebase' || user.oauthId !== decoded.uid) {
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        oauthProvider: 'firebase',
+        oauthId: decoded.uid,
+      },
+    });
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    name: user.name,
+    locale: user.locale,
+  };
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -11,8 +51,13 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Mot de passe', type: 'password' },
+        idToken: { label: 'Firebase ID Token', type: 'text' },
       },
       async authorize(credentials) {
+        if (credentials?.idToken) {
+          return getOrCreatePrismaUserFromFirebase(credentials.idToken);
+        }
+
         if (!credentials?.email || !credentials?.password) return null;
         const user = await prisma.user.findUnique({ where: { email: credentials.email } });
         if (!user || !user.passwordHash) return null;
@@ -20,10 +65,6 @@ export const authOptions: NextAuthOptions = {
         if (!isValid) return null;
         return { id: user.id, email: user.email, role: user.role, name: user.name, locale: user.locale };
       },
-    }),
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
   ],
   session: {

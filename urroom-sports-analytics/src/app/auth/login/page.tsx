@@ -1,10 +1,31 @@
 
 "use client";
 import React, { useState } from 'react';
-import { signIn, useSession } from 'next-auth/react';
+import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { firebaseAuth } from '../../../lib/firebase/client';
 import styles from './LoginPage.module.css';
+
+async function redirectByRole(router: ReturnType<typeof useRouter>) {
+  const response = await fetch('/api/auth/session');
+  const session = await response.json();
+
+  if (session?.user?.role === 'ADMIN') {
+    router.replace('/dashboard/admin');
+  } else if (session?.user?.role === 'SCOUT') {
+    router.replace('/dashboard/scout');
+  } else if (session?.user?.role === 'CLUB') {
+    router.replace('/dashboard/club');
+  } else if (session?.user?.role === 'AGENT') {
+    router.replace('/dashboard/agent');
+  } else if (session?.user?.role === 'PLAYER') {
+    router.replace('/dashboard/player');
+  } else {
+    router.replace('/dashboard/overview');
+  }
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -22,33 +43,40 @@ export default function LoginPage() {
       setLoading(false);
       return;
     }
-    const res = await signIn('credentials', {
-      redirect: false,
-      email,
-      password,
-    });
-    setLoading(false);
-    if (res?.error) {
-      setError('Email ou mot de passe incorrect.');
-    } else {
-      // Récupérer la session pour obtenir le rôle
-      const response = await fetch('/api/auth/session');
-      const session = await response.json();
-      
-      // Redirection selon le rôle
-      if (session?.user?.role === 'ADMIN') {
-        router.replace('/dashboard/admin');
-      } else if (session?.user?.role === 'SCOUT') {
-        router.replace('/dashboard/scout');
-      } else if (session?.user?.role === 'CLUB') {
-        router.replace('/dashboard/club');
-      } else if (session?.user?.role === 'AGENT') {
-        router.replace('/dashboard/agent');
-      } else if (session?.user?.role === 'PLAYER') {
-        router.replace('/dashboard/player');
-      } else {
-        router.replace('/dashboard/overview');
+    try {
+      // Primary path: Firebase auth + NextAuth session bridge.
+      const firebaseUser = await signInWithEmailAndPassword(firebaseAuth, email, password);
+      const idToken = await firebaseUser.user.getIdToken();
+      const res = await signIn('credentials', {
+        redirect: false,
+        idToken,
+      });
+
+      if (res?.error) {
+        setError('Erreur de session. Réessayez dans quelques secondes.');
+        setLoading(false);
+        return;
       }
+
+      await redirectByRole(router);
+      setLoading(false);
+      return;
+    } catch {
+      // Fallback path for legacy accounts stored with passwordHash in Prisma.
+      const legacyRes = await signIn('credentials', {
+        redirect: false,
+        email,
+        password,
+      });
+
+      if (!legacyRes?.error) {
+        await redirectByRole(router);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(false);
+      setError('Email ou mot de passe incorrect.');
     }
   };
 

@@ -1,0 +1,151 @@
+.toast {
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+  z-index: 9999;
+  min-width: 320px;
+  max-width: 500px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(12px);
+  animation: slideIn 0.3s ease-out;
+  border: 1px solid;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.message {
+  flex: 1;
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.closeButton {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.closeButton:active {
+  transform: scale(0.95);
+}
+
+/* Success variant */
+.success {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.15) 100%);
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.success .icon {
+  color: #34d399;
+}
+
+.success .message {
+  color: #d1fae5;
+}
+
+.success .closeButton {
+  color: #a7f3d0;
+}
+
+/* Error variant */
+.error {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.15) 100%);
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+.error .icon {
+  color: #f87171;
+}
+
+.error .message {
+  color: #fecaca;
+}
+
+.error .closeButton {
+  color: #fca5a5;
+}
+
+/* Warning variant */
+.warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.15) 100%);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.warning .icon {
+  color: #fbbf24;
+}
+
+.warning .message {
+  color: #fef3c7;
+}
+
+.warning .closeButton {
+  color: #fde68a;
+}
+
+/* Info variant */
+.info {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(14, 165, 233, 0.15) 100%);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.info .icon {
+  color: #38bdf8;
+}
+
+.info .message {
+  color: #dbeafe;
+}
+
+.info .closeButton {
+  color: #bfdbfe;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .toast {
+    top: 1rem;
+    right: 1rem;
+    left: 1rem;
+    min-width: auto;
+  }
+}

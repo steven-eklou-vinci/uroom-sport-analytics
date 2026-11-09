@@ -1,10 +1,33 @@
 {
-  "hero_title": "Next-generation Football Scouting & Data",
-  "hero_subtitle": "All-in-one platform for clubs and players: catalog, assess, share and find top talents with data and video.",
+  "hero_title": "The European Standard for U11-U18 Talent Detection",
+  "hero_subtitle": "Transform your field observations into actionable intelligence. Reduce uncertainty, correct biases, and secure your recruitment decisions with longitudinal data.",
   "cta_try": "Try for free",
-  "cta_discover": "Discover",
-  "how_it_works_title": "How it works",
-  "how_it_works_desc": "A simple and intuitive platform to revolutionize your approach to scouting and performance analysis.",
-  "features_title": "Features",
-  "features_desc": "Discover all the tools you need to optimize your recruitment and evaluation strategy."
+  "cta_discover": "Discover our solution",
+  
+  "problem_title": "We know today's best, but do you know tomorrow's champions?",
+  "problem_desc": "Talent detection is not just about identifying current top players. The real challenge is predicting who will excel tomorrow.",
+  "problem_1_title": "Fragmented Data",
+  "problem_1_desc": "No longitudinal memory, impossible to analyze a progression trajectory.",
+  "problem_2_title": "Systematic Biases",
+  "problem_2_desc": "Relative Age Effect (RAE) and biological maturity distort talent detection.",
+  "problem_3_title": "Legal Risks",
+  "problem_3_desc": "Non-GDPR compliant minors data collection, lack of traceability.",
+  
+  "solution_title": "Uroom: The structuring layer the market was missing",
+  "solution_desc": "A unique platform that transforms fragmentation into intelligence, biases into objectivity, and uncertainty into secure decisions.",
+  "solution_1_title": "AI Potential Index",
+  "solution_1_desc": "Predictive algorithm correcting biological biases (RAE, maturation) to identify true potential of young U11-U18 players.",
+  "solution_2_title": "Longitudinal Memory",
+  "solution_2_desc": "Player's digital passport from U11 to U18: complete history, measurable progression, analyzable trajectory.",
+  "solution_3_title": "GDPR-by-Design",
+  "solution_3_desc": "Native protection of minors: parental consent, access traceability, compliant retention. Your legal barrier.",
+  
+  "segments_title": "A solution for every football stakeholder",
+  "segments_desc": "From amateur clubs to professional elite, through scouts, agents and families: Uroom unifies the ecosystem.",
+  
+  "features_title": "Key Features",
+  "features_desc": "Discover all the tools you need to optimize your recruitment and evaluation strategy.",
+  
+  "cta_final_title": "Ready to structure your talent detection?",
+  "cta_final_desc": "Join the clubs, scouts and academies transforming their scouting approach with Uroom Sports Analytics."
 }

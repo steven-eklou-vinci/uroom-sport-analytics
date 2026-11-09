@@ -45,6 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const totalPlayers = await prisma.playerProfile.count();
 
     return res.status(200).json({
+      playerId: player.id,
       uroomRank: player.uroomRank || null,
       uroomScore: player.uroomScore || 0,
       totalPlayers,

@@ -74,6 +74,16 @@ export default function Header() {
     const roleSpecificItems: Record<string, Array<{label: string, href: string, icon: React.ReactNode}>> = {
       'ADMIN': [
         {
+          label: 'Analyse des matchs',
+          href: '/dashboard/matches',
+          icon: (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M7 6L10 8L7 10V6Z" fill="currentColor"/>
+            </svg>
+          )
+        },
+        {
           label: 'Gestion utilisateurs',
           href: '/dashboard/admin',
           icon: (
@@ -211,6 +221,16 @@ export default function Header() {
         }
       ],
       'SCOUT': [
+        {
+          label: 'Analyse des matchs',
+          href: '/dashboard/matches',
+          icon: (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M7 6L10 8L7 10V6Z" fill="currentColor"/>
+            </svg>
+          )
+        },
         {
           label: 'Mes rapports',
           href: '/dashboard/reports',

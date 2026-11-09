@@ -5,9 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useState } from 'react';
-import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import Table from '../../components/ui/Table';
 import Image from 'next/image';
 
 export default function PlayersDashboard() {
@@ -35,68 +33,111 @@ export default function PlayersDashboard() {
   );
 
   return (
-    <section>
+    <section style={{ padding: '2rem' }}>
       <div style={{marginBottom:'1.5rem'}}>
         <Link href="/dashboard/overview" style={{textDecoration:'none'}}>
           <button style={{background:'#14B8A6',color:'#fff',border:'none',borderRadius:'6px',padding:'0.5rem 1.2rem',fontWeight:600,fontSize:'1rem',boxShadow:'0 2px 8px 0 rgba(16,30,54,0.06)',cursor:'pointer',transition:'background 0.18s'}} onMouseOver={e=>e.currentTarget.style.background='#0F766E'} onMouseOut={e=>e.currentTarget.style.background='#14B8A6'}>&larr; Retour</button>
         </Link>
       </div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-primary uppercase tracking-tight">Joueurs</h1>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#E2E8F0', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Joueurs</h1>
         <Link href="/dashboard/players/new">
           <Button>Ajouter un joueur</Button>
         </Link>
       </div>
-      <Card>
+      <div style={{
+        background: 'linear-gradient(145deg, #0B1220 0%, #0F172A 100%)',
+        border: '1px solid #1F2937',
+        borderRadius: '14px',
+        padding: '1.75rem',
+        boxShadow: '0 18px 40px rgba(2, 6, 23, 0.35)'
+      }}>
         <input
-          className="mb-6 p-2 rounded border border-gray-200 w-full text-dark bg-light focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none"
+          style={{
+            width: '100%',
+            marginBottom: '1.5rem',
+            padding: '0.65rem 0.85rem',
+            borderRadius: '10px',
+            border: '1px solid #334155',
+            background: '#0B1220',
+            color: '#E2E8F0',
+            outline: 'none'
+          }}
           placeholder="Recherche joueur..."
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
-        <Table>
+        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 0.65rem' }}>
           <thead>
-            <tr className="bg-primary text-white">
-              <th className="py-2 px-3 text-left">Photo</th>
-              <th className="py-2 px-3 text-left">Prénom</th>
-              <th className="py-2 px-3 text-left">Nom</th>
-              <th className="py-2 px-3 text-left">Poste</th>
-              <th className="py-2 px-3 text-left">Pays</th>
-              <th className="py-2 px-3 text-left">Tags</th>
-              <th></th>
+            <tr style={{ background: '#0B1220' }}>
+              {['Photo', 'Prénom', 'Nom', 'Poste', 'Pays', 'Tags', ''].map((label, idx) => (
+                <th key={label || idx} style={{
+                  padding: '0.85rem 1rem',
+                  textAlign: 'left',
+                  color: '#A8B3CF',
+                  fontSize: '0.75rem',
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase'
+                }}>
+                  {label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {filtered.map(player => (
-              <tr key={player.id} className="even:bg-light odd:bg-white hover:bg-secondary/10 transition-colors" style={{verticalAlign:'middle'}}>
-                <td className="py-2 px-3" style={{paddingTop:0,paddingBottom:0,verticalAlign:'middle'}}>
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%'}}>
-                    <Image
-                      src={player.photoUrl || "/cercle-bleu-utilisateur-blanc.png"}
-                      alt={player.firstName + ' ' + player.lastName}
-                      width={48}
-                      height={48}
-                      style={{borderRadius:'50%',objectFit:'cover',border:'2px solid #e2e8f0',background:'#f1f5f9',flexShrink:0,display:'block'}} 
-                    />
-                  </div>
-                </td>
-                <td className="py-2 px-3 font-semibold text-dark" style={{verticalAlign:'middle',textAlign:'center'}}>{player.firstName}</td>
-                <td className="py-2 px-3 font-semibold text-dark" style={{verticalAlign:'middle',textAlign:'center'}}>{player.lastName}</td>
-                <td className="py-2 px-3" style={{verticalAlign:'middle',textAlign:'center'}}>
-                  {Array.isArray(player.positions) ? player.positions.join(', ') : player.position || ''}
-                </td>
-                <td className="py-2 px-3" style={{verticalAlign:'middle',textAlign:'center'}}>{player.nationality}</td>
-                <td className="py-2 px-3" style={{verticalAlign:'middle',textAlign:'center'}}>{player.tags?.join(', ')}</td>
-                <td className="py-2 px-3" style={{verticalAlign:'middle',textAlign:'center'}}>
-                  <Link href={`/dashboard/players/${player.id}`}>
-                    <Button variant="secondary">Voir</Button>
-                  </Link>
-                </td>
-              </tr>
-            ))}
+            {filtered.map((player, index) => {
+              const rowBg = index % 2 === 0 ? '#0B1220' : '#0F172A';
+              const baseCell = {
+                background: rowBg,
+                borderTop: '1px solid #1F2937',
+                borderBottom: '1px solid #1F2937',
+                padding: '0.75rem 1rem',
+                color: '#E2E8F0',
+                fontSize: '0.95rem'
+              } as const;
+              return (
+                <tr key={player.id}>
+                  <td style={{ ...baseCell, borderLeft: '1px solid #1F2937', borderTopLeftRadius: '12px', borderBottomLeftRadius: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                      <Image
+                        src={player.photoUrl || "/cercle-bleu-utilisateur-blanc.png"}
+                        alt={player.firstName + ' ' + player.lastName}
+                        width={48}
+                        height={48}
+                        style={{ borderRadius: '50%', objectFit: 'cover', border: '2px solid #243041', background: '#0B1220', flexShrink: 0, display: 'block' }}
+                      />
+                    </div>
+                  </td>
+                  <td style={{ ...baseCell, fontWeight: 600 }}>{player.firstName}</td>
+                  <td style={{ ...baseCell, fontWeight: 600 }}>{player.lastName}</td>
+                  <td style={baseCell}>
+                    {Array.isArray(player.positions) ? player.positions.join(', ') : player.position || ''}
+                  </td>
+                  <td style={baseCell}>{player.nationality}</td>
+                  <td style={baseCell}>{player.tags?.join(', ')}</td>
+                  <td style={{ ...baseCell, borderRight: '1px solid #1F2937', borderTopRightRadius: '12px', borderBottomRightRadius: '12px', textAlign: 'center' }}>
+                    <Link href={`/dashboard/players/${player.id}`}>
+                      <Button
+                        variant="secondary"
+                        style={{
+                          background: '#101827',
+                          color: '#E2E8F0',
+                          border: '1px solid #2B3A52',
+                          padding: '0.45rem 1.15rem',
+                          fontSize: '0.9rem',
+                          boxShadow: 'none'
+                        }}
+                      >
+                        Voir
+                      </Button>
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
-        </Table>
-      </Card>
+        </table>
+      </div>
     </section>
   );
 }

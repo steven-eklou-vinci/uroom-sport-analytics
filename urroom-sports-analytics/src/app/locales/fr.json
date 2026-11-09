@@ -1,10 +1,33 @@
 {
-  "hero_title": "Scouting & Data Football nouvelle génération",
-  "hero_subtitle": "Plateforme tout-en-un pour clubs et joueurs : cataloguez, évaluez, partagez et trouvez les meilleurs talents grâce à la donnée et la vidéo.",
+  "hero_title": "Le Standard Européen de Détection des Talents U11-U18",
+  "hero_subtitle": "Transformez vos observations terrain en intelligence exploitable. Réduisez l'incertitude, corrigez les biais et sécurisez vos décisions de recrutement grâce à la donnée longitudinale.",
   "cta_try": "Essayer gratuitement",
-  "cta_discover": "Découvrir",
-  "how_it_works_title": "Comment ça fonctionne",
-  "how_it_works_desc": "Une plateforme simple et intuitive pour révolutionner votre approche du scouting et de l'analyse de performance.",
-  "features_title": "Fonctionnalités",
-  "features_desc": "Découvrez tous les outils dont vous avez besoin pour optimiser votre stratégie de recrutement et d'évaluation."
+  "cta_discover": "Découvrir notre solution",
+  
+  "problem_title": "Nous connaissons les meilleurs d'aujourd'hui, mais connaissez-vous les meilleurs de demain ?",
+  "problem_desc": "La détection des talents ne se résume pas à identifier les meilleurs joueurs actuels. Le véritable enjeu est de prédire qui excellera demain.",
+  "problem_1_title": "Données fragmentées",
+  "problem_1_desc": "Aucune mémoire longitudinale, impossible d'analyser une trajectoire de progression.",
+  "problem_2_title": "Biais systématiques",
+  "problem_2_desc": "Effet d'âge relatif (RAE) et maturité biologique faussent la détection des talents.",
+  "problem_3_title": "Risques juridiques",
+  "problem_3_desc": "Collecte de données mineurs non conforme RGPD, absence de traçabilité.",
+  
+  "solution_title": "Notre Solution : Un Écosystème Unifié pour le Football Jeune",
+  "solution_desc": "Une plateforme unique qui transforme la fragmentation en intelligence, les biais en objectivité, et l'incertitude en décisions sécurisées.",
+  "solution_1_title": "Index de Potentiel IA",
+  "solution_1_desc": "Algorithme prédictif corrigeant les biais biologiques (RAE, maturation) pour identifier le vrai potentiel des jeunes joueurs U11-U18.",
+  "solution_2_title": "Mémoire Longitudinale",
+  "solution_2_desc": "Passeport numérique du joueur de U11 à U18 : historique complet, progression mesurable, trajectoire analysable.",
+  "solution_3_title": "RGPD-by-Design",
+  "solution_3_desc": "Protection native des mineurs : consentement parental, traçabilité des accès, rétention conforme. Votre barrière juridique.",
+  
+  "segments_title": "Une solution pour chaque acteur du football",
+  "segments_desc": "Du club amateur à l'élite professionnelle, en passant par les scouts, agents et familles : Uroom unifie l'écosystème.",
+  
+  "features_title": "Fonctionnalités Clés",
+  "features_desc": "Découvrez tous les outils dont vous avez besoin pour optimiser votre stratégie de recrutement et d'évaluation.",
+  
+  "cta_final_title": "Prêt à structurer votre détection de talents ?",
+  "cta_final_desc": "Rejoignez les clubs, scouts et académies qui transforment leur approche du scouting avec Uroom Sports Analytics."
 }

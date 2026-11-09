@@ -53,6 +53,8 @@ urroom-sports-analytics/prisma/dev.db
 # Uploads
 urroom-api/uploads/
 uploads/
+urroom-sports-analytics/data/match_uploads/
+uroom-ia/data/match_analyses/
 
 # Temp files
 *.tmp

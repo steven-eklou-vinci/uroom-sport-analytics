@@ -63,22 +63,39 @@ export default function AgentDashboard() {
               transition: 'all 0.2s',
               boxShadow: '0 2px 8px rgba(20,184,166,0.3)'
             }}>
-              👥 Gérer mes joueurs
+              Gérer mes joueurs
             </button>
           </Link>
-          <button style={{
-            background: '#0F766E',
-            color: '#fff',
-            padding: '0.75rem 1.5rem',
-            borderRadius: '6px',
-            border: 'none',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            boxShadow: '0 2px 8px rgba(15,118,110,0.3)'
-          }}>
-            🏟️ Voir les opportunités clubs
-          </button>
+          <Link href="/dashboard/players/search" style={{ textDecoration: 'none' }}>
+            <button style={{
+              background: '#0B3B3A',
+              color: '#E2E8F0',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '6px',
+              border: '1px solid #1F6A64',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              boxShadow: '0 2px 8px rgba(11,59,58,0.3)'
+            }}>
+              Voir tous les joueurs
+            </button>
+          </Link>
+          <Link href="/dashboard/opportunities" style={{ textDecoration: 'none' }}>
+            <button style={{
+              background: '#0F766E',
+              color: '#fff',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '6px',
+              border: 'none',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              boxShadow: '0 2px 8px rgba(15,118,110,0.3)'
+            }}>
+              Voir les opportunités clubs
+            </button>
+          </Link>
           <button style={{
             background: '#334155',
             color: '#fff',
@@ -90,7 +107,7 @@ export default function AgentDashboard() {
             transition: 'all 0.2s',
             boxShadow: '0 2px 8px rgba(51,65,85,0.3)'
           }}>
-            📧 Messagerie
+            Messagerie
           </button>
         </div>
       </div>

@@ -8,22 +8,24 @@ datasource db {
 }
 
 model User {
-  id              String          @id @default(uuid())
-  email           String          @unique
-  passwordHash    String?
-  oauthProvider   String?
-  oauthId         String?
-  role            Role
-  name            String
-  locale          String          @default("fr")
-  createdAt       DateTime        @default(now())
-  clubId          String?
-  assessments     Assessment[]    @relation("ScoutAssessments")
-  players         PlayerProfile[]
-  reports         Report[]
-  followedPlayers PlayerFollow[]
-  managedClub     Club?           @relation("ClubScouts", fields: [clubId], references: [id])
-  Club_ClubToUser Club[]          @relation("ClubToUser")
+  id                  String          @id @default(uuid())
+  email               String          @unique
+  passwordHash        String?
+  oauthProvider       String?
+  oauthId             String?
+  role                Role
+  name                String
+  locale              String          @default("fr")
+  createdAt           DateTime        @default(now())
+  clubId              String?
+  assessments         Assessment[]    @relation("ScoutAssessments")
+  players             PlayerProfile[]
+  createdPlayers      PlayerProfile[] @relation("ScoutCreatedPlayers")
+  matchAnalyses       MatchAnalysis[]  @relation("ScoutMatchAnalyses")
+  reports             Report[]
+  followedPlayers     PlayerFollow[]
+  managedClub         Club?           @relation("ClubScouts", fields: [clubId], references: [id])
+  Club_ClubToUser     Club[]          @relation("ClubToUser")
 }
 
 model Club {
@@ -42,30 +44,87 @@ model Club {
 }
 
 model PlayerProfile {
-  id            String            @id @default(uuid())
-  firstName     String
-  lastName      String
-  birthDate     DateTime
-  nationality   String
-  foot          String
-  heightCm      Int?
-  weightKg      Int?
-  tags          String[]
-  publicOptIn   Boolean           @default(false)
-  photoUrl      String?
-  videoUrls     String[]
-  userId        String?
-  createdAt     DateTime          @default(now())
-  positions     String[]
-  uroomScore    Float?            @default(0)
-  uroomRank     Int?
-  profileViews  Int               @default(0)
-  assessments   Assessment[]
-  user          User?             @relation(fields: [userId], references: [id])
-  reports       Report[]
-  shortlists    ShortlistPlayer[]
-  trialRequests TrialRequest[]
-  followers     PlayerFollow[]
+  id                String            @id @default(uuid())
+  firstName         String
+  lastName          String
+  birthDate         DateTime?
+  age               Int?              // Pour les joueurs créés par scouts sans date de naissance exacte
+  nationality       String?
+  foot              String?
+  heightCm          Int?
+  weightKg          Int?
+  tags              String[]
+  publicOptIn       Boolean           @default(false)
+  photoUrl          String?
+  videoUrls         String[]
+  userId            String?
+  createdAt         DateTime          @default(now())
+  positions         String[]
+  uroomScore        Float?            @default(0)
+  uroomRank         Int?
+  profileViews      Int               @default(0)
+  dataSource        PlayerDataSource  @default(PLATFORM_DATA)
+  createdByScoutId  String?
+  assessments       Assessment[]
+  user              User?             @relation(fields: [userId], references: [id])
+  createdByScout    User?             @relation("ScoutCreatedPlayers", fields: [createdByScoutId], references: [id])
+  reports           Report[]
+  shortlists        ShortlistPlayer[]
+  trialRequests     TrialRequest[]
+  followers         PlayerFollow[]
+  potentialIndex    PotentialIndex?
+  bioBanding        BioBanding?
+  comparisons       PlayerComparison[]
+  matchAppearances  MatchPlayerTracking[]
+}
+
+model MatchAnalysis {
+  id          String               @id @default(uuid())
+  title       String
+  matchDate   DateTime?
+  opponent    String?
+  videoUrl    String
+  status      MatchAnalysisStatus  @default(UPLOADED)
+  analysisJobId String?            @unique
+  hasAnnotatedVideo Boolean         @default(false)
+  hasTrackFrames Boolean            @default(false)
+  processedFrames Int?
+  fps         Float?
+  error       String?
+  createdAt   DateTime             @default(now())
+  createdById String
+  createdBy   User                 @relation("ScoutMatchAnalyses", fields: [createdById], references: [id])
+  players     MatchPlayerTracking[]
+
+  @@index([createdById, createdAt])
+  @@index([status])
+}
+
+model MatchPlayerTracking {
+  id         String               @id @default(uuid())
+  matchId    String
+  trackId    Int
+  objectClass String
+  playerId   String?
+  associationConfirmed Boolean @default(false)
+  team       String?
+  match      MatchAnalysis        @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player     PlayerProfile?       @relation(fields: [playerId], references: [id])
+  statistics MatchPlayerStatistic[]
+
+  @@unique([matchId, trackId])
+  @@index([playerId])
+}
+
+model MatchPlayerStatistic {
+  id         String              @id @default(uuid())
+  trackingId String
+  key        String
+  value      Float
+  unit       String?
+  tracking   MatchPlayerTracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
+
+  @@unique([trackingId, key])
 }
 
 model Assessment {
@@ -100,7 +159,7 @@ model Report {
   summary      String
   strengths    String[]
   weaknesses   String[]
-  clubFit      String[]
+  clubFit      String[]      @default([])
   pdfUrl       String?
   createdAt    DateTime      @default(now())
   authorId     String?
@@ -155,6 +214,7 @@ enum Role {
   ADMIN
   SCOUT
   CLUB
+  AGENT
   PLAYER
 }
 
@@ -164,8 +224,122 @@ enum AssessmentStatus {
   DONE
 }
 
+enum MatchAnalysisStatus {
+  UPLOADED
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
 enum TrialStatus {
   PENDING
   APPROVED
   DECLINED
+}
+
+enum PlayerDataSource {
+  PLATFORM_DATA
+  SCOUT_CREATED
+}
+
+model PotentialIndex {
+  id          String        @id @default(uuid())
+  playerId    String        @unique
+  score       Float
+  trajectory  Trajectory
+  confidence  Float         @default(0.5)
+  factors     Json
+  lastUpdated DateTime      @default(now())
+  
+  player      PlayerProfile @relation(fields: [playerId], references: [id])
+  
+  @@index([playerId])
+}
+
+enum Trajectory {
+  RISING
+  STABLE_HIGH
+  STABLE_MID
+  DECLINING
+  INSUFFICIENT
+}
+
+model BioBanding {
+  id                String        @id @default(uuid())
+  playerId          String        @unique
+  chronologicalAge  Float
+  biologicalAge     Float
+  maturityOffset    Float
+  category          MaturityLevel
+  calculatedAt      DateTime      @default(now())
+  
+  player            PlayerProfile @relation(fields: [playerId], references: [id])
+  
+  @@index([playerId])
+}
+
+enum MaturityLevel {
+  EARLY_MATURE
+  AVERAGE
+  LATE_MATURE
+}
+
+// Profils de joueurs professionnels pour comparaisons
+model ProPlayerProfile {
+  id              String              @id @default(uuid())
+  name            String
+  currentClub     String?
+  nationality     String
+  positions       String[]
+  birthDate       DateTime
+  photoUrl        String?
+  currentLeague   String              // ex: Premier League, La Liga, Ligue 1
+  marketValue     Float?              // Valeur marchande actuelle en millions €
+  playingStyle    String[]            // ex: ["Technique", "Vision", "Passe courte"]
+  careerPath      String[]            // ex: ["Formation Academy X", "Prêt Club Y", "Transfert Club Z"]
+  
+  // Stats historiques par âge (JSON structure)
+  // Format: { "15": { "technical": 7.2, "physical": 6.5, ... }, "16": {...} }
+  historicalStats Json
+  
+  comparisons     PlayerComparison[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  
+  @@index([positions])
+  @@index([currentLeague])
+}
+
+// Comparaisons IA entre joueurs jeunes et professionnels
+model PlayerComparison {
+  id              String          @id @default(uuid())
+  playerId        String
+  proPlayerId     String
+  
+  // Score de similarité (0-100)
+  matchScore      Float
+  
+  // Détails de la comparaison
+  similarities    String[]        // Points communs identifiés
+  differences     String[]        // Différences notables
+  
+  // Analyse détaillée
+  technicalMatch  Float           // Similarité technique (0-100)
+  physicalMatch   Float           // Similarité physique (0-100)
+  styleMatch      Float           // Similarité de style de jeu (0-100)
+  
+  // Contexte de la comparaison
+  playerAge       Int             // Âge du joueur au moment de la comparaison
+  proPlayerAge    Int             // Âge du pro au moment des stats utilisées
+  
+  confidence      Float           // Niveau de confiance de l'IA (0-1)
+  generatedAt     DateTime        @default(now())
+  
+  player          PlayerProfile   @relation(fields: [playerId], references: [id])
+  proPlayer       ProPlayerProfile @relation(fields: [proPlayerId], references: [id])
+  
+  @@index([playerId])
+  @@index([matchScore])
 }

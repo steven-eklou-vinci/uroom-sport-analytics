@@ -4,13 +4,17 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import PlayerComparison from '../../../../components/PlayerComparison';
+import PlayerDataBadge from '../../../../components/ui/PlayerDataBadge';
+import ScoutReportsList from '../../../../components/ui/ScoutReportsList';
 import styles from './PlayerProfilePage.module.css';
 
 interface PlayerData {
   id: string;
   firstName: string;
   lastName: string;
-  birthDate: string;
+  birthDate: string | null;
+  age: number | null;
   nationality: string;
   positions: string[];
   foot: string;
@@ -19,6 +23,23 @@ interface PlayerData {
   photoUrl?: string;
   tags: string[];
   videoUrls: string[];
+  dataSource?: 'PLATFORM_DATA' | 'SCOUT_CREATED';
+  createdByScout?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  matchAppearances?: MatchAppearance[];
+}
+
+interface MatchAppearance {
+  id: string;
+  trackId: number;
+  title: string;
+  opponent: string | null;
+  matchDate: string | null;
+  createdAt: string;
+  statistics: { key: string; value: number; unit: string | null }[];
 }
 
 interface Assessment {
@@ -31,6 +52,20 @@ interface Assessment {
     value: number;
     unit: string;
   }[];
+}
+
+interface ScoutReport {
+  id: string;
+  summary: string;
+  strengths: string[];
+  weaknesses: string[];
+  clubFit?: string[];
+  createdAt: string;
+  author?: {
+    id: string;
+    name: string;
+    email: string;
+  };
 }
 
 interface FollowInfo {
@@ -48,7 +83,10 @@ export default function PlayerProfilePage() {
 
   const [player, setPlayer] = useState<PlayerData | null>(null);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [scoutReports, setScoutReports] = useState<ScoutReport[]>([]);
   const [followInfo, setFollowInfo] = useState<FollowInfo | null>(null);
+  const [comparisons, setComparisons] = useState<any[]>([]);
+  const [loadingComparisons, setLoadingComparisons] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(2025);
 
@@ -62,8 +100,13 @@ export default function PlayerProfilePage() {
     if (playerId) {
       fetchPlayerData();
       fetchAssessments();
+      fetchScoutReports();
       if (session?.user?.role === 'SCOUT') {
         fetchFollowInfo();
+      }
+      // Fetch comparisons pour tous les recruteurs (scouts, clubs, admins)
+      if (session?.user?.role === 'SCOUT' || session?.user?.role === 'CLUB' || session?.user?.role === 'ADMIN') {
+        fetchComparisons();
       }
     }
   }, [playerId, session]);
@@ -94,6 +137,19 @@ export default function PlayerProfilePage() {
     }
   };
 
+  const fetchScoutReports = async () => {
+    try {
+      const userRole = session?.user?.role || '';
+      const res = await fetch(`/api/reports/player/${playerId}?userRole=${userRole}`);
+      if (res.ok) {
+        const data = await res.json();
+        setScoutReports(data);
+      }
+    } catch (error) {
+      console.error('Erreur fetch scout reports:', error);
+    }
+  };
+
   const fetchFollowInfo = async () => {
     try {
       const res = await fetch(`/api/players/${playerId}/follow-info`);
@@ -106,6 +162,32 @@ export default function PlayerProfilePage() {
       }
     } catch (error) {
       console.error('Erreur fetch follow info:', error);
+    }
+  };
+
+  const fetchComparisons = async () => {
+    try {
+      setLoadingComparisons(true);
+      const res = await fetch('/api/analytics/similar-pros', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId, topK: 5 })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Comparaisons IA reçues:', data);
+        setComparisons(Array.isArray(data) ? data : []);
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Erreur récupération comparaisons:', res.status, errorData);
+        setComparisons([]);
+      }
+    } catch (error) {
+      console.error('Erreur fetch comparisons:', error);
+      setComparisons([]);
+    } finally {
+      setLoadingComparisons(false);
     }
   };
 
@@ -131,7 +213,8 @@ export default function PlayerProfilePage() {
     }
   };
 
-  const calculateAge = (birthDate: string) => {
+  const calculateAge = (birthDate: string | null, fallbackAge?: number | null) => {
+    if (!birthDate) return fallbackAge ?? null;
     const today = new Date();
     const birth = new Date(birthDate);
     let age = today.getFullYear() - birth.getFullYear();
@@ -160,7 +243,7 @@ export default function PlayerProfilePage() {
       const avgValue = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
       // IA prediction: add 3-8 points per future year (diminishing with age)
       const yearDiff = year - 2025;
-      const age = player ? calculateAge(player.birthDate) : 20;
+      const age = player ? calculateAge(player.birthDate, player.age) ?? 20 : 20;
       const ageFactor = Math.max(0.3, 1 - (age / 30)); // Younger players improve more
       const evolution = yearDiff > 0 ? Math.floor((Math.random() * 5) + 3) * ageFactor : 0;
       const predictedValue = Math.min(100, Math.round(avgValue + (evolution * yearDiff)));
@@ -185,7 +268,14 @@ export default function PlayerProfilePage() {
 
   const radarData = generateRadarData(selectedYear);
   const years = [2025, 2026, 2027, 2028, 2029];
-  const age = calculateAge(player.birthDate);
+  const age = calculateAge(player.birthDate, player.age);
+  const matchAppearances = player.matchAppearances || [];
+  const totalDetections = matchAppearances.reduce((total, appearance) =>
+    total + (appearance.statistics.find((stat) => stat.key === 'detections')?.value || 0), 0
+  );
+  const totalVisibleSeconds = matchAppearances.reduce((total, appearance) =>
+    total + (appearance.statistics.find((stat) => stat.key === 'visible_seconds')?.value || 0), 0
+  );
   
   console.log('Rendering with followInfo:', followInfo);
 
@@ -240,9 +330,17 @@ export default function PlayerProfilePage() {
           )}
         </div>
         <div className={styles.playerInfo}>
-          <h1>{player.firstName} {player.lastName}</h1>
+          <div className={styles.playerTitleRow}>
+            <h1>{player.firstName} {player.lastName}</h1>
+            {player.dataSource && player.dataSource !== 'PLATFORM_DATA' && (
+              <PlayerDataBadge 
+                dataSource={player.dataSource} 
+                createdByScout={player.createdByScout}
+              />
+            )}
+          </div>
           <div className={styles.playerMeta}>
-            <span className={styles.age}>{age} ans</span>
+            <span className={styles.age}>{age === null ? 'Âge non renseigné' : `${age} ans`}</span>
             <span>•</span>
             <span>{player.nationality}</span>
             <span>•</span>
@@ -263,11 +361,11 @@ export default function PlayerProfilePage() {
         </div>
       </div>
 
-      {/* Radar Chart with IA Prediction */}
+      {/* Radar Chart - Métriques Uroom & Prédiction IA */}
       {radarData.length > 0 && (
         <div className={styles.metricsSection}>
           <div className={styles.sectionHeader}>
-            <h2>📊 Métriques Uroom & Prédiction IA</h2>
+            <h2>Métriques Uroom & Prédiction IA</h2>
             <div className={styles.yearSelector}>
               {years.map((year) => (
                 <button
@@ -301,13 +399,66 @@ export default function PlayerProfilePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
               <p>
-                <strong>Prédiction IA Uroom:</strong> Les valeurs affichées pour {selectedYear} sont des projections basées sur l'évolution moyenne des joueurs de profil similaire. 
-                Ces prédictions prennent en compte l'âge ({age} ans), le potentiel actuel et les tendances historiques. Amélioration projetée: +{Math.round((selectedYear - 2025) * 4 * Math.max(0.3, 1 - (age / 30)))} points moyens.
+                <strong>Prédiction IA Uroom:</strong> Les valeurs affichées pour {selectedYear} sont des projections basées sur l&apos;évolution moyenne des joueurs de profil similaire.
+                Ces prédictions prennent en compte l&apos;âge ({age === null ? 'non renseigné' : `${age} ans`}), le potentiel actuel et les tendances historiques. Amélioration projetée: +{Math.round((selectedYear - 2025) * 4 * Math.max(0.3, 1 - ((age ?? 20) / 30)))} points moyens.
               </p>
             </div>
           )}
         </div>
       )}
+
+      <section className={styles.matchHistorySection}>
+        <div className={styles.matchHistoryHeader}>
+          <div>
+            <p className={styles.matchHistoryEyebrow}>Suivi vidéo</p>
+            <h2>Historique des matchs</h2>
+          </div>
+          <div className={styles.matchHistoryTotals}>
+            <span><strong>{matchAppearances.length}</strong> matchs</span>
+            <span><strong>{totalDetections.toLocaleString('fr-FR')}</strong> détections</span>
+            <span><strong>{(totalVisibleSeconds / 60).toFixed(1)}</strong> min visibles</span>
+          </div>
+        </div>
+        {matchAppearances.length === 0 ? (
+          <p className={styles.matchHistoryEmpty}>Aucune apparition vidéo associée à ce profil.</p>
+        ) : (
+          <div className={styles.matchHistoryTableWrap}>
+            <table className={styles.matchHistoryTable}>
+              <thead>
+                <tr>
+                  <th>Match</th>
+                  <th>Date</th>
+                  <th>ID suivi</th>
+                  <th>Détections</th>
+                  <th>Temps visible</th>
+                </tr>
+              </thead>
+              <tbody>
+                {matchAppearances.map((appearance) => (
+                  <tr key={appearance.id}>
+                    <td>{appearance.title}{appearance.opponent ? ` · ${appearance.opponent}` : ''}</td>
+                    <td>{new Date(appearance.matchDate || appearance.createdAt).toLocaleDateString('fr-FR')}</td>
+                    <td>#{appearance.trackId}</td>
+                    <td>{appearance.statistics.find((stat) => stat.key === 'detections')?.value || 0}</td>
+                    <td>{(appearance.statistics.find((stat) => stat.key === 'visible_seconds')?.value || 0).toFixed(1)} s</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* Player Comparisons - Visible uniquement pour scouts/clubs/admins */}
+      {(session?.user?.role === 'SCOUT' || session?.user?.role === 'CLUB' || session?.user?.role === 'ADMIN') && (
+        <PlayerComparison comparisons={comparisons} loading={loadingComparisons} />
+      )}
+
+      {/* Scout Reports - Visible pour tous */}
+      <ScoutReportsList 
+        reports={scoutReports} 
+        userRole={session?.user?.role}
+      />
 
       {/* Videos */}
       {assessments.some((a) => a.videos.length > 0) && (

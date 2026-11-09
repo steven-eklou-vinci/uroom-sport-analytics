@@ -2,9 +2,15 @@
 "use client";
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { firebaseAuth } from '../../../lib/firebase/client';
 import styles from './RegisterPage.module.css';
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -20,15 +26,43 @@ export default function RegisterPage() {
       setLoading(false);
       return;
     }
-    // Remplacer par l'appel réel à l'API d'inscription
-    setTimeout(() => {
+
+    if (!name || !email || !password) {
+      setError('Veuillez remplir tous les champs.');
       setLoading(false);
-      if (email === '' || password === '') {
-        setError('Veuillez remplir tous les champs.');
-      } else {
-        // Rediriger ou afficher le succès
+      return;
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+      await updateProfile(userCredential.user, { displayName: name });
+      const idToken = await userCredential.user.getIdToken();
+
+      const registerRes = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken, name, role: 'PLAYER', locale: 'fr' }),
+      });
+
+      if (!registerRes.ok) {
+        throw new Error('Registration failed');
       }
-    }, 1000);
+
+      const signInRes = await signIn('credentials', {
+        redirect: false,
+        idToken,
+      });
+
+      if (signInRes?.error) {
+        throw new Error('Session creation failed');
+      }
+
+      setLoading(false);
+      router.replace('/dashboard/player');
+    } catch {
+      setLoading(false);
+      setError('Impossible de créer le compte. Vérifiez les informations et réessayez.');
+    }
   };
 
   return (
@@ -37,6 +71,17 @@ export default function RegisterPage() {
         <h1 className={styles.title}>Créer un compte</h1>
         <form onSubmit={handleSubmit} className={styles.form}>
           <label className={styles.label}>
+            Nom
+            <input
+              type="text"
+              className={styles.input}
+              value={name}
+              onChange={e => setName(e.target.value)}
+              required
+              autoFocus
+            />
+          </label>
+          <label className={styles.label}>
             Email
             <input
               type="email"
@@ -44,7 +89,6 @@ export default function RegisterPage() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              autoFocus
             />
           </label>
           <label className={styles.label}>

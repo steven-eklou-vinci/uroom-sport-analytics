@@ -1,0 +1,42 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.compact {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.platformData {
+  background-color: #E8F5E9;
+  color: #2E7D32;
+}
+
+.scoutCreated {
+  background-color: #FFF3E0;
+  color: #E65100;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.dotGreen {
+  background-color: #4CAF50;
+}
+
+.dotOrange {
+  background-color: #FF9800;
+}
+
+.text {
+  line-height: 1;
+}

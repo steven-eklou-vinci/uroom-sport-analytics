@@ -113,12 +113,6 @@
   padding: 0.25em 0.5em;
   display: inline-block;
 }
-.sectionTitle:hover, .sectionTitle:focus {
-  background: #14B8A6;
-  color: #fff;
-  box-shadow: 0 2px 12px 0 rgba(20,184,166,0.10);
-  text-decoration: underline;
-}
 
 .sectionDesc {
   font-size: 1.125rem;

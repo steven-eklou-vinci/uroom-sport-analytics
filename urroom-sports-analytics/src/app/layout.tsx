@@ -1,6 +1,4 @@
 'use client';
-import Header from './components/ui/Header';
-import Footer from './components/ui/Footer';
 import ClientLayout from './ClientLayout';
 import styles from './layout.module.css';
 import ConditionalLayout from './ConditionalLayout';

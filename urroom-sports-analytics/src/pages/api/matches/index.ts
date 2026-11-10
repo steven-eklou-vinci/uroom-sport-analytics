@@ -5,6 +5,7 @@ import fs, { createReadStream } from 'node:fs';
 import path from 'node:path';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '../../../lib/prisma';
+import { getAnalysisServiceUrl, getServiceHeaders, syncAnalysis, type TrackingJob } from '../../../lib/matchAnalysis';
 
 export const config = {
   api: { bodyParser: false },
@@ -12,24 +13,6 @@ export const config = {
 
 const allowedVideoExtensions = new Set(['.mp4', '.mov', '.m4v', '.avi', '.mkv', '.webm']);
 const maxVideoSize = Number(process.env.UROOM_MATCH_MAX_FILE_SIZE || 10 * 1024 ** 3);
-
-interface TrackingJob {
-  id: string;
-  status: 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
-  annotatedVideoAvailable?: boolean;
-  trackFramesAvailable?: boolean;
-  processedFrames?: number;
-  fps?: number;
-  tracks?: Array<{
-    trackId: number;
-    class: string;
-    detections: number;
-    firstFrame: number;
-    lastFrame: number;
-    visibleSeconds: number;
-  }>;
-  error?: string;
-}
 
 function firstValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -51,75 +34,6 @@ async function readJsonBody(req: NextApiRequest): Promise<Record<string, unknown
     throw new Error('Expected a JSON object');
   }
   return body as Record<string, unknown>;
-}
-
-function getAnalysisServiceUrl(): string {
-  return (process.env.IA_MODEL_URL || 'http://localhost:8000').replace(/\/$/, '');
-}
-
-function getServiceHeaders(): Record<string, string> {
-  const token = process.env.IA_SERVICE_TOKEN;
-  return token ? { 'X-Uroom-Service-Token': token } : {};
-}
-
-async function syncAnalysis(matchId: string, jobId: string, currentStatus: string) {
-  if (!['QUEUED', 'PROCESSING'].includes(currentStatus)) return;
-
-  try {
-    const response = await fetch(`${getAnalysisServiceUrl()}/match/jobs/${jobId}`, {
-      headers: getServiceHeaders(),
-    });
-    if (!response.ok) return;
-
-    const job = await response.json() as TrackingJob;
-    if (job.status === 'COMPLETED') {
-      await prisma.$transaction(async (transaction) => {
-        await transaction.matchPlayerTracking.deleteMany({ where: { matchId } });
-        for (const track of job.tracks || []) {
-          const statisticRows = [
-            { key: 'detections', value: track.detections, unit: 'frames' },
-            { key: 'first_frame', value: track.firstFrame, unit: 'frame' },
-            { key: 'last_frame', value: track.lastFrame, unit: 'frame' },
-            { key: 'visible_seconds', value: track.visibleSeconds, unit: 's' },
-          ];
-          await transaction.matchPlayerTracking.create({
-            data: {
-              matchId,
-              trackId: track.trackId,
-              objectClass: track.class,
-              associationConfirmed: false,
-              statistics: { create: statisticRows },
-            },
-          });
-        }
-        await transaction.matchAnalysis.update({
-          where: { id: matchId },
-          data: {
-            status: 'COMPLETED',
-            processedFrames: job.processedFrames,
-            fps: job.fps,
-            hasAnnotatedVideo: job.annotatedVideoAvailable === true,
-            hasTrackFrames: job.trackFramesAvailable === true,
-            error: null,
-          },
-        });
-      });
-    } else if (job.status === 'FAILED') {
-      await prisma.matchAnalysis.update({
-        where: { id: matchId },
-        data: { status: 'FAILED', error: job.error || 'Échec de l’analyse vidéo' },
-      });
-    } else if (job.status === 'CANCELLED') {
-      await prisma.matchAnalysis.update({
-        where: { id: matchId },
-        data: { status: 'CANCELLED', error: null },
-      });
-    } else if (job.status === 'PROCESSING' && currentStatus !== 'PROCESSING') {
-      await prisma.matchAnalysis.update({ where: { id: matchId }, data: { status: 'PROCESSING' } });
-    }
-  } catch (error) {
-    console.error('Unable to synchronize match analysis:', error);
-  }
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

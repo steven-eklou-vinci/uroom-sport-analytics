@@ -35,6 +35,7 @@ interface TrackedMatchVideoProps {
   hasTrackFrames: boolean;
   fps: number | null;
   confirmedTracks: ConfirmedTrack[];
+  initialMode?: VideoMode;
 }
 
 type VideoMode = 'original' | 'all' | 'confirmed';
@@ -49,8 +50,17 @@ export default function TrackedMatchVideo({
   hasTrackFrames,
   fps,
   confirmedTracks,
+  initialMode = 'original',
 }: TrackedMatchVideoProps) {
-  const [mode, setMode] = useState<VideoMode>('original');
+  const canShowConfirmed = hasTrackFrames && confirmedTracks.length > 0;
+  const canShowAnnotated = hasAnnotatedVideo && !!annotatedVideoUrl;
+  const [mode, setMode] = useState<VideoMode>(
+    initialMode === 'confirmed' && canShowConfirmed
+      ? 'confirmed'
+      : initialMode === 'all' && canShowAnnotated
+        ? 'all'
+        : 'original'
+  );
   const [overlayError, setOverlayError] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);

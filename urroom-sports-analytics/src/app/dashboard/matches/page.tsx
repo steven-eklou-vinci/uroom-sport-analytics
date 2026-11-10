@@ -2,65 +2,17 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import TrackedMatchVideo from './TrackedMatchVideo';
+import TrackedObjectRow from './TrackedObjectRow';
 import styles from './MatchesPage.module.css';
-
-interface PlayerOption {
-  id: string;
-  firstName: string;
-  lastName: string;
-  positions: string[];
-}
-
-interface MatchStatistic {
-  key: string;
-  value: number;
-  unit: string | null;
-}
-
-interface TrackedObject {
-  id: string;
-  trackId: number;
-  objectClass: string;
-  playerId: string | null;
-  associationConfirmed: boolean;
-  player: PlayerOption | null;
-  statistics: MatchStatistic[];
-}
-
-interface MatchAnalysis {
-  id: string;
-  title: string;
-  opponent: string | null;
-  matchDate: string | null;
-  videoUrl: string;
-  annotatedVideoUrl: string | null;
-  hasAnnotatedVideo: boolean;
-  hasTrackFrames: boolean;
-  status: 'UPLOADED' | 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
-  processedFrames: number | null;
-  fps: number | null;
-  error: string | null;
-  createdAt: string;
-  players: TrackedObject[];
-}
-
-const statusLabels: Record<MatchAnalysis['status'], string> = {
-  UPLOADED: 'Importé',
-  QUEUED: 'En file',
-  PROCESSING: 'Analyse en cours',
-  COMPLETED: 'Analyse terminée',
-  FAILED: 'Échec',
-  CANCELLED: 'Annulée',
-};
-
-const classLabels: Record<string, string> = {
-  player: 'Joueur',
-  person: 'Personne à vérifier',
-  referee: 'Arbitre',
-  ball: 'Ballon',
-};
+import { MatchAnalysis, PlayerOption, statusLabels, playerName } from './types';
+import {
+  assignTrackPlayer,
+  setTrackAssociationConfirmed,
+  confirmAllTrackAssociations,
+} from '../../../lib/matchTrackingClient';
 
 export default function MatchesPage() {
   const { status: sessionStatus } = useSession();
@@ -171,51 +123,32 @@ export default function MatchesPage() {
     }
   };
 
-  const handlePlayerAssignment = async (matchId: string, trackId: number, playerId: string) => {
-    const response = await fetch('/api/matches', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ matchId, trackId, playerId: playerId || null }),
-    });
-    if (!response.ok) {
-      const result = await response.json();
-      setPageError(result.error || 'Impossible d’associer ce track au joueur');
-      return;
+  const runTrackingMutation = async (action: () => Promise<void>, fallbackMessage: string) => {
+    try {
+      await action();
+      await loadMatches(true);
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : fallbackMessage);
     }
-    await loadMatches(true);
   };
 
-  const handleAssociationConfirmation = async (matchId: string, trackId: number, confirm: boolean) => {
-    const response = await fetch('/api/matches', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: confirm ? 'confirm-association' : 'unconfirm-association',
-        matchId,
-        trackId,
-      }),
-    });
-    if (!response.ok) {
-      const result = await response.json();
-      setPageError(result.error || 'Impossible de confirmer cette association');
-      return;
-    }
-    await loadMatches(true);
-  };
+  const handlePlayerAssignment = (matchId: string, trackId: number, playerId: string) =>
+    runTrackingMutation(
+      () => assignTrackPlayer(matchId, trackId, playerId || null),
+      'Impossible d’associer ce track au joueur',
+    );
 
-  const handleConfirmAllAssociations = async (matchId: string) => {
-    const response = await fetch('/api/matches', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'confirm-all-associations', matchId }),
-    });
-    if (!response.ok) {
-      const result = await response.json();
-      setPageError(result.error || 'Impossible de confirmer les associations');
-      return;
-    }
-    await loadMatches(true);
-  };
+  const handleAssociationConfirmation = (matchId: string, trackId: number, confirm: boolean) =>
+    runTrackingMutation(
+      () => setTrackAssociationConfirmed(matchId, trackId, confirm),
+      'Impossible de confirmer cette association',
+    );
+
+  const handleConfirmAllAssociations = (matchId: string) =>
+    runTrackingMutation(
+      () => confirmAllTrackAssociations(matchId),
+      'Impossible de confirmer les associations',
+    );
 
   const handleDeleteMatch = async (match: MatchAnalysis) => {
     if (!window.confirm(`Supprimer « ${match.title} » et ses données de suivi ? Cette action est définitive.`)) {
@@ -356,6 +289,9 @@ export default function MatchesPage() {
                       <span className={`${styles.status} ${styles[`status${match.status}`]}`}>
                         {statusLabels[match.status]}
                       </span>
+                      <Link className={styles.detailButton} href={`/dashboard/matches/${match.id}`}>
+                        Détail
+                      </Link>
                       {match.status === 'QUEUED' || match.status === 'PROCESSING' ? (
                         <button
                           type="button"
@@ -405,9 +341,7 @@ export default function MatchesPage() {
                       fps={match.fps}
                       confirmedTracks={playerTracks.map((track) => ({
                         trackId: track.trackId,
-                        playerName: track.player
-                          ? `${track.player.firstName} ${track.player.lastName}`
-                          : 'Joueur',
+                        playerName: playerName(track.player) || 'Joueur',
                       }))}
                     />
                     <div className={styles.trackPanel}>
@@ -430,50 +364,15 @@ export default function MatchesPage() {
                         <p className={styles.trackHint}>Aucun joueur suivi détecté dans cette vidéo.</p>
                       ) : (
                         <div className={styles.trackList}>
-                          {match.players.map((track) => {
-                            const detections = track.statistics.find((stat) => stat.key === 'detections')?.value || 0;
-                            const visibleSeconds = track.statistics.find((stat) => stat.key === 'visible_seconds')?.value || 0;
-                            return (
-                              <div className={styles.trackRow} key={track.id}>
-                                <div className={styles.trackLabel}>
-                                  <strong>#{track.trackId}</strong>
-                                  <span>
-                                    {track.associationConfirmed && track.player
-                                      ? `${track.player.firstName} ${track.player.lastName} · confirmé`
-                                      : track.player
-                                        ? `${track.player.firstName} ${track.player.lastName} · à confirmer`
-                                        : classLabels[track.objectClass] || track.objectClass}
-                                  </span>
-                                  <small>{detections} détections · {visibleSeconds.toFixed(1)} s</small>
-                                </div>
-                                {(track.objectClass === 'player' || track.objectClass === 'person') && (
-                                  <div className={styles.associationControls}>
-                                    <select
-                                      aria-label={`Associer le track ${track.trackId} à un joueur`}
-                                      value={track.playerId || ''}
-                                      onChange={(event) => void handlePlayerAssignment(match.id, track.trackId, event.target.value)}
-                                    >
-                                      <option value="">{track.objectClass === 'person' ? 'À vérifier / laisser vide...' : 'Laisser vide / associer...'}</option>
-                                      {players.map((player) => (
-                                        <option key={player.id} value={player.id}>
-                                          {player.firstName} {player.lastName} · {player.positions.join(', ')}
-                                        </option>
-                                      ))}
-                                    </select>
-                                    {track.playerId && (
-                                      <button
-                                        type="button"
-                                        className={track.associationConfirmed ? styles.associationConfirmedButton : styles.confirmAssociationButton}
-                                        onClick={() => void handleAssociationConfirmation(match.id, track.trackId, !track.associationConfirmed)}
-                                      >
-                                        {track.associationConfirmed ? 'Confirmée' : 'Confirmer'}
-                                      </button>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
+                          {match.players.map((track) => (
+                            <TrackedObjectRow
+                              key={track.id}
+                              track={track}
+                              players={players}
+                              onAssign={(trackId, playerId) => void handlePlayerAssignment(match.id, trackId, playerId)}
+                              onToggleConfirmation={(trackId, confirm) => void handleAssociationConfirmation(match.id, trackId, confirm)}
+                            />
+                          ))}
                         </div>
                       )}
                     </div>

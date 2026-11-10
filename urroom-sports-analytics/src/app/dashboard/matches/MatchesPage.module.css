@@ -266,6 +266,25 @@
   cursor: pointer;
 }
 
+.detailButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.detailButton:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .cancelButton {
   display: inline-flex;
   align-items: center;
@@ -539,6 +558,10 @@
   font-size: 10px;
 }
 
+.trackLabel .trackPasses {
+  color: #c4ee61;
+}
+
 .trackRow select {
   width: 100%;
   min-height: 34px;
@@ -570,6 +593,82 @@
   color: var(--accent);
   font-size: 24px;
   font-weight: 800;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 20px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: var(--accent);
+}
+
+.statsSection {
+  margin-top: 34px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.statCard {
+  display: grid;
+  gap: 9px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.statCardHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.statCardHeader strong {
+  font-size: 15px;
+}
+
+.statCardHeader span {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.statCard p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.statRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.statRow span {
+  color: var(--muted);
+}
+
+.statRow strong {
+  font-size: 13px;
 }
 
 @media (max-width: 760px) {

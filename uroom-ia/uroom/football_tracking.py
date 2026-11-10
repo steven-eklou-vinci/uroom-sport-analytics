@@ -8,6 +8,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Optional
 
+from .football_analytics import PlayerBallAssigner, PossessionTracker, TeamClassifier, detect_passes
+
 
 class AnalysisCancelled(Exception):
     pass
@@ -45,8 +47,16 @@ def analyze_video(video_path: Path, cancel_event: Optional[threading.Event] = No
         fps = 25.0
 
     model_path = os.getenv("UROOM_YOLO_MODEL", "yolo11l.pt")
+    # Wide (Veo) footage shrinks the ball to ~10px; at the default 640 inference
+    # size it often disappears entirely, which is why the ball used to be seen on
+    # ~3% of frames. A larger inference size makes the ball detectable.
+    image_size = int(os.getenv("UROOM_YOLO_IMGSZ", "1280"))
     model = YOLO(model_path)
     tracks = {}
+    ball_assigner = PlayerBallAssigner()
+    possession_tracker = PossessionTracker(ball_assigner, max_gap_frames=max(1, int(round(fps * 0.5))))
+    team_classifier = TeamClassifier(sample_interval=max(1, int(round(fps / 2))))
+    possession: list[Optional[int]] = []
     processed_frames = 0
     annotated_video_path = video_path.with_name("annotated.mp4")
     track_frames_path = video_path.with_name("track_frames.ndjson")
@@ -63,12 +73,16 @@ def analyze_video(video_path: Path, cancel_event: Optional[threading.Event] = No
             persist=True,
             stream=True,
             verbose=False,
+            imgsz=image_size,
         )):
             if cancel_event and cancel_event.is_set():
                 raise AnalysisCancelled
             processed_frames = frame_index + 1
             annotated_frame = result.orig_img.copy()
+            frame_image = result.orig_img
             frame_detections = []
+            frame_players = []
+            frame_ball = None
             boxes = result.boxes
             if boxes is not None and boxes.id is not None:
                 track_ids = boxes.id.int().cpu().tolist()
@@ -90,6 +104,12 @@ def analyze_video(video_path: Path, cancel_event: Optional[threading.Event] = No
                     track["detections"] += 1
                     track["lastFrame"] = frame_index
                     frame_detections.append([int(track_id), role, *box])
+
+                    if role == "ball":
+                        frame_ball = box
+                    elif role in {"player", "person"}:
+                        frame_players.append((int(track_id), box))
+                        team_classifier.observe(int(track_id), frame_image, box)
 
                     if role in {"player", "person"}:
                         left, top, right, bottom = box
@@ -120,6 +140,8 @@ def analyze_video(video_path: Path, cancel_event: Optional[threading.Event] = No
                             2,
                             cv2.LINE_AA,
                         )
+
+            possession.append(possession_tracker.update(frame_index, frame_players, frame_ball))
 
             if track_frames_stream is None:
                 raise RuntimeError("Unable to write per-frame tracking data")
@@ -191,19 +213,29 @@ def analyze_video(video_path: Path, cancel_event: Optional[threading.Event] = No
         track_frame_index_path.unlink(missing_ok=True)
         raise ValueError("The annotated video could not be generated")
 
+    team_classifier.assign_teams()
+    pass_stats = detect_passes(possession, team_classifier.team_for, fps)
+
     player_tracks = []
     for track in tracks.values():
         role = track["classCounts"].most_common(1)[0][0]
         first_frame = track["firstFrame"]
         last_frame = track["lastFrame"]
-        player_tracks.append({
+        entry = {
             "trackId": track["trackId"],
             "class": role,
             "detections": track["detections"],
             "firstFrame": first_frame,
             "lastFrame": last_frame,
             "visibleSeconds": round((last_frame - first_frame + 1) / fps, 2),
-        })
+        }
+        if role in {"player", "person"}:
+            entry["team"] = team_classifier.team_for(track["trackId"])
+            passes = pass_stats.get(track["trackId"], {"attempted": 0, "completed": 0, "failed": 0})
+            entry["passesAttempted"] = passes["attempted"]
+            entry["passesCompleted"] = passes["completed"]
+            entry["passesFailed"] = passes["failed"]
+        player_tracks.append(entry)
 
     return {
         "processedFrames": processed_frames,

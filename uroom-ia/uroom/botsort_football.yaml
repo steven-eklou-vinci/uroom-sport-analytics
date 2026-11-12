@@ -1,12 +1,24 @@
+# BoT-SORT pour vidéos de foot de jeunes (Veo / grand angle, maillots identiques).
+# Philosophie : le tracker en ligne n'a pas à être parfait. On préfère qu'il FRAGMENTE
+# (un nouvel ID, récupérable) plutôt qu'il ÉCHANGE deux joueurs (erreur silencieuse) ;
+# tracklets.py recolle ensuite les fragments avec des garde-fous.
+# Ces valeurs sont des points de départ : mesure-les avec evaluate_tracking.py.
+
 tracker_type: botsort
-track_high_thresh: 0.25
-track_low_thresh: 0.1
-new_track_thresh: 0.25
-track_buffer: 150
-match_thresh: 0.8
+
+track_high_thresh: 0.25   # 1re association (détections fiables)
+track_low_thresh: 0.1     # 2e association (détections floues / en mouvement)
+new_track_thresh: 0.25    # ne pas monter : les joueurs du côté lointain ont une confiance basse
+track_buffer: 90          # en IMAGES (~3,5 s à 25 fps) ; 150 ré-associait à tort pendant les duels
+match_thresh: 0.7         # un peu plus strict que 0.8 : on accepte de fragmenter
 fuse_score: true
+
+# Caméra fixe (panorama brut) : mets "none". Vidéo auto-recadrée type Veo : garde sparseOptFlow.
 gmc_method: sparseOptFlow
-proximity_thresh: 0.1
+
+# Maillots identiques : l'apparence ne distingue pas les coéquipiers et peut « confirmer »
+# une mauvaise association. Désactivée ; les valeurs ci-dessous ne servent que si tu la réactives.
+with_reid: false
+proximity_thresh: 0.5
 appearance_thresh: 0.8
-with_reid: true
 model: auto

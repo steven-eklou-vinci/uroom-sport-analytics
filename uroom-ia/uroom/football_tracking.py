@@ -1,14 +1,54 @@
-"""YOLO + ByteTrack video tracking for football match footage."""
+"""YOLO + BoT-SORT video tracking for football match footage.
 
-import os
+Deux étapes :
+
+1. **Détection + tracking en ligne** (une passe YOLO).
+   * Le ballon est capté AVANT le tracker (callback ``on_predict_postprocess_end``) et
+     retiré de son entrée : un objet minuscule et fugitif n'a rien à faire dans un
+     filtre de Kalman, et le tracker masque les nouvelles pistes jusqu'à leur
+     confirmation, ce qui perd les détections isolées du ballon.
+   * Les détections de joueurs / arbitres sont conservées brutes, par frame
+     (boîte, rôle, couleur de maillot échantillonnée).
+
+2. **Post-traitement hors-ligne** (voir match_analysis.py) : découpe des pistes aux
+   contacts, recollage global, trajectoire du ballon, touches, passes. Puis on écrit
+   ``track_frames.ndjson`` (identités stabilisées) et on rend ``annotated.mp4`` avec
+   ces mêmes identités. Les détections brutes sont sauvegardées dans
+   ``raw_detections.npz`` pour rejouer l'analyse (replay_analysis.py).
+
+Le format de sortie reste compatible avec l'ancienne version ; des champs ont été
+ajoutés (``activeSeconds``, ``touches``, ``passesUncertain``, ``uncertainFraction``,
+``ball``, ``quality``).
+"""
+
 import json
+import os
 import subprocess
 import threading
-from collections import Counter
 from pathlib import Path
 from typing import Optional
 
-from .football_analytics import PlayerBallAssigner, PossessionTracker, TeamClassifier, detect_passes
+import numpy as np
+
+from .football_analytics import jersey_colour
+from .match_analysis import MatchAnalysis, analyse_match, save_raw_detections
+from .tracklets import (
+    COL_ROLE,
+    COL_TID,
+    COL_X1,
+    COL_X2,
+    COL_Y1,
+    COL_Y2,
+    ROLE_PERSON,
+    ROLE_PLAYER,
+    ROLE_REFEREE,
+)
+
+BALL_TRACK_ID = 0
+_ROLE_CODES = {"player": ROLE_PLAYER, "person": ROLE_PERSON, "referee": ROLE_REFEREE}
+_ROLE_NAMES = {code: name for name, code in _ROLE_CODES.items()}
+_TEAM_COLOURS = {1: (96, 238, 196), 2: (255, 170, 80), 0: (0, 210, 255)}   # BGR
+_REFEREE_COLOUR = (180, 180, 180)
 
 
 class AnalysisCancelled(Exception):
@@ -26,6 +66,192 @@ def _football_role(label: str) -> str:
     if "player" in normalized or "goalkeeper" in normalized:
         return "player"
     return normalized
+
+
+def _make_ball_capture(ball_log: list):
+    """Callback exécuté AVANT le tracker : sort le ballon de ses entrées.
+
+    Ajoute une entrée à ``ball_log`` par frame : tableau (m, 5) [x1, y1, x2, y2, conf]
+    ou None. Le callback doit être enregistré avant ``model.track(...)`` pour passer
+    avant celui du tracker.
+    """
+    state: dict = {"ids": None}
+
+    def on_postprocess_end(predictor) -> None:
+        for i, result in enumerate(predictor.results):
+            entry = None
+            boxes = result.boxes
+            if boxes is not None and len(boxes):
+                if state["ids"] is None:
+                    state["ids"] = np.array(
+                        [cid for cid, name in result.names.items() if _football_role(str(name)) == "ball"],
+                        dtype=np.int64,
+                    )
+                cls = boxes.cls.int().cpu().numpy()
+                is_ball = np.isin(cls, state["ids"])
+                if is_ball.any():
+                    xyxy = boxes.xyxy.cpu().numpy()
+                    conf = boxes.conf.cpu().numpy()
+                    entry = np.column_stack((xyxy[is_ball], conf[is_ball])).astype(np.float32)
+                    try:
+                        keep = np.flatnonzero(~is_ball)
+                        predictor.results[i] = result[keep] if keep.size else result[:0]
+                    except Exception:  # noqa: BLE001 — version d'Ultralytics différente : le ballon restera aussi dans le tracker
+                        pass
+            ball_log.append(entry)
+
+    return on_postprocess_end
+
+
+def _frame_rows(result, frame_index: int, sample_interval: int):
+    """Lignes [tid, x1, y1, x2, y2, role, b, g, r] des pistes d'une frame + ballon de secours."""
+    rows = []
+    fallback_ball = []
+    boxes = result.boxes
+    if boxes is not None and boxes.id is not None:
+        track_ids = boxes.id.int().cpu().tolist()
+        class_ids = boxes.cls.int().cpu().tolist()
+        confidences = boxes.conf.cpu().tolist()
+        coordinates = boxes.xyxy.cpu().tolist()
+        sample = frame_index % sample_interval == 0
+        for track_id, class_id, conf, box in zip(track_ids, class_ids, confidences, coordinates):
+            role = _football_role(str(result.names[int(class_id)]))
+            if role == "ball":                      # n'arrive que si le callback a échoué
+                fallback_ball.append([*box, conf])
+                continue
+            if role not in _ROLE_CODES:
+                continue
+            colour = (np.nan, np.nan, np.nan)
+            if sample and role != "referee":
+                measured = jersey_colour(result.orig_img, box)
+                if measured is not None:
+                    colour = tuple(float(v) for v in measured)
+            rows.append([track_id, *box, _ROLE_CODES[role], *colour])
+    array = np.asarray(rows, dtype=np.float32).reshape(-1, 9)
+    ball = np.asarray(fallback_ball, dtype=np.float32).reshape(-1, 5) if fallback_ball else None
+    return array, ball
+
+
+def _start_encoder(imageio_ffmpeg, output_path: Path, width: int, height: int, fps: float):
+    encoder = subprocess.Popen(
+        [
+            imageio_ffmpeg.get_ffmpeg_exe(),
+            "-y",
+            "-loglevel", "error",
+            "-f", "rawvideo",
+            "-vcodec", "rawvideo",
+            "-pix_fmt", "bgr24",
+            "-s:v", f"{width}x{height}",
+            "-r", str(fps),
+            "-i", "-",
+            "-an",
+            "-c:v", "libx264",
+            "-preset", "veryfast",
+            "-crf", "23",
+            "-pix_fmt", "yuv420p",
+            "-movflags", "+faststart",
+            str(output_path),
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    if encoder.stdin is None:
+        raise RuntimeError("Unable to open the annotated video encoder")
+    return encoder
+
+
+def _write_track_frames(path: Path, index_path: Path, frames, analysis: MatchAnalysis) -> None:
+    offsets = []
+    with path.open("wb") as stream:
+        for f, arr in enumerate(frames):
+            if f % 300 == 0:
+                offsets.append([f, stream.tell()])
+            gids = analysis.frame_gids[f]
+            detections = []
+            for k in range(len(arr)):
+                if gids[k] < 0:
+                    continue
+                x1, y1, x2, y2 = (int(round(v)) for v in arr[k, COL_X1:COL_Y2 + 1])
+                detections.append([int(gids[k]), _ROLE_NAMES[int(arr[k, COL_ROLE])], x1, y1, x2, y2])
+            if analysis.ball_valid[f]:
+                cx, cy = analysis.ball_xy[f]
+                detections.append([BALL_TRACK_ID, "ball", int(cx - 6), int(cy - 6), int(cx + 6), int(cy + 6)])
+            line = json.dumps({"frame": f, "detections": detections}, separators=(",", ":"))
+            stream.write(f"{line}\n".encode("utf-8"))
+    index_path.write_text(json.dumps(offsets), encoding="utf-8")
+
+
+def _render_annotated(
+    cv2,
+    imageio_ffmpeg,
+    video_path: Path,
+    output_path: Path,
+    fps: float,
+    frames,
+    analysis: MatchAnalysis,
+    cancel_event: Optional[threading.Event],
+) -> int:
+    """Deuxième lecture de la vidéo : dessine les identités STABILISÉES (pas celles du tracker)."""
+    capture = cv2.VideoCapture(str(video_path))
+    encoder = None
+    touch_frames = {t.frame: t for t in analysis.touches if t.gid is not None}
+    written = 0
+    try:
+        for f, arr in enumerate(frames):
+            if cancel_event and cancel_event.is_set():
+                raise AnalysisCancelled
+            ok, image = capture.read()
+            if not ok:
+                break
+            gids = analysis.frame_gids[f]
+            for k in range(len(arr)):
+                gid = int(gids[k])
+                if gid < 0:
+                    continue
+                left, top, right, bottom = (int(round(v)) for v in arr[k, COL_X1:COL_Y2 + 1])
+                is_referee = int(arr[k, COL_ROLE]) == ROLE_REFEREE
+                colour = _REFEREE_COLOUR if is_referee else _TEAM_COLOURS[analysis.stabilised.team_by_gid.get(gid, 0)]
+                cv2.rectangle(image, (left, top), (right, bottom), colour, 2)
+                if is_referee:
+                    continue
+                uncertain = bool(analysis.stabilised.uncertain[f][k])
+                marker = f"#{gid}?" if uncertain else f"#{gid}"
+                (marker_width, marker_height), baseline = cv2.getTextSize(marker, cv2.FONT_HERSHEY_SIMPLEX, 0.65, 2)
+                label_top = max(0, top - marker_height - baseline - 8)
+                cv2.rectangle(image, (left, label_top), (left + marker_width + 10, top), colour, -1)
+                cv2.putText(image, marker, (left + 5, top - baseline - 3),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.65, (20, 32, 29), 2, cv2.LINE_AA)
+            if analysis.ball_valid[f]:
+                centre = (int(analysis.ball_xy[f][0]), int(analysis.ball_xy[f][1]))
+                cv2.circle(image, centre, 7, (255, 255, 255), 2 if analysis.ball_observed[f] else 1)
+                for offset in range(0, 8):                  # anneau jaune juste après une touche
+                    touch = touch_frames.get(f - offset)
+                    if touch is not None:
+                        ring = (0, 220, 255) if touch.quality == "clear" else (0, 140, 255)
+                        cv2.circle(image, centre, 14 + offset, ring, 2)
+                        break
+            if encoder is None:
+                height, width = image.shape[:2]
+                encoder = _start_encoder(imageio_ffmpeg, output_path, width, height, fps)
+            if encoder.stdin is None:
+                raise RuntimeError("The annotated video encoder closed its input")
+            encoder.stdin.write(image.tobytes())
+            written += 1
+        if encoder is not None:
+            if encoder.stdin is not None:
+                encoder.stdin.close()
+            return_code = encoder.wait()
+            encoder = None
+            if return_code != 0:
+                raise RuntimeError("FFmpeg could not encode the annotated preview")
+    finally:
+        capture.release()
+        if encoder is not None:
+            if encoder.poll() is None:
+                encoder.kill()
+            encoder.wait()
+    return written
 
 
 def analyze_video(video_path: Path, cancel_event: Optional[threading.Event] = None) -> dict:
@@ -47,26 +273,25 @@ def analyze_video(video_path: Path, cancel_event: Optional[threading.Event] = No
         fps = 25.0
 
     model_path = os.getenv("UROOM_YOLO_MODEL", "yolo11l.pt")
-    # Wide (Veo) footage shrinks the ball to ~10px; at the default 640 inference
-    # size it often disappears entirely, which is why the ball used to be seen on
-    # ~3% of frames. A larger inference size makes the ball detectable.
+    # Wide (Veo) footage shrinks the ball to ~10px; a larger inference size keeps it detectable.
     image_size = int(os.getenv("UROOM_YOLO_IMGSZ", "1280"))
+    # Seuil bas : le ballon est souvent à 0,05–0,2 de confiance. Le tracker ignore de
+    # lui-même les détections sous track_low_thresh, donc les joueurs ne sont pas pollués.
+    confidence = float(os.getenv("UROOM_YOLO_CONF", "0.05"))
     model = YOLO(model_path)
-    tracks = {}
-    ball_assigner = PlayerBallAssigner()
-    possession_tracker = PossessionTracker(ball_assigner, max_gap_frames=max(1, int(round(fps * 0.5))))
-    team_classifier = TeamClassifier(sample_interval=max(1, int(round(fps / 2))))
-    possession: list[Optional[int]] = []
-    processed_frames = 0
+
+    ball_log: list = []
+    model.add_callback("on_predict_postprocess_end", _make_ball_capture(ball_log))
+
+    sample_interval = max(1, int(round(fps / 2)))
+    frames: list[np.ndarray] = []
+    fallback_balls: list = []
+
     annotated_video_path = video_path.with_name("annotated.mp4")
     track_frames_path = video_path.with_name("track_frames.ndjson")
     track_frame_index_path = video_path.with_name("track_frames.index.json")
-    video_encoder = None
-    track_frames_stream = None
-    frame_offsets = []
 
     try:
-        track_frames_stream = track_frames_path.open("wb")
         for frame_index, result in enumerate(model.track(
             source=str(video_path),
             tracker=str(Path(__file__).with_name("botsort_football.yaml")),
@@ -74,173 +299,72 @@ def analyze_video(video_path: Path, cancel_event: Optional[threading.Event] = No
             stream=True,
             verbose=False,
             imgsz=image_size,
+            conf=confidence,
         )):
             if cancel_event and cancel_event.is_set():
                 raise AnalysisCancelled
-            processed_frames = frame_index + 1
-            annotated_frame = result.orig_img.copy()
-            frame_image = result.orig_img
-            frame_detections = []
-            frame_players = []
-            frame_ball = None
-            boxes = result.boxes
-            if boxes is not None and boxes.id is not None:
-                track_ids = boxes.id.int().cpu().tolist()
-                class_ids = boxes.cls.int().cpu().tolist()
-                coordinates = boxes.xyxy.int().cpu().tolist()
-                for track_id, class_id, box in zip(track_ids, class_ids, coordinates):
-                    label = result.names[int(class_id)]
-                    role = _football_role(str(label))
-                    if role not in {"player", "person", "referee", "ball"}:
-                        continue
-                    track = tracks.setdefault(track_id, {
-                        "trackId": track_id,
-                        "classCounts": Counter(),
-                        "detections": 0,
-                        "firstFrame": frame_index,
-                        "lastFrame": frame_index,
-                    })
-                    track["classCounts"][role] += 1
-                    track["detections"] += 1
-                    track["lastFrame"] = frame_index
-                    frame_detections.append([int(track_id), role, *box])
+            rows, fallback = _frame_rows(result, frame_index, sample_interval)
+            frames.append(rows)
+            fallback_balls.append(fallback)
 
-                    if role == "ball":
-                        frame_ball = box
-                    elif role in {"player", "person"}:
-                        frame_players.append((int(track_id), box))
-                        team_classifier.observe(int(track_id), frame_image, box)
+        if not frames:
+            raise ValueError("The annotated video could not be generated")
 
-                    if role in {"player", "person"}:
-                        left, top, right, bottom = box
-                        marker_color = (96, 238, 196) if role == "player" else (0, 210, 255)
-                        cv2.rectangle(annotated_frame, (left, top), (right, bottom), marker_color, 2)
-                        marker = f"#{track_id}" if role == "player" else f"#{track_id}?"
-                        (marker_width, marker_height), baseline = cv2.getTextSize(
-                            marker,
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.65,
-                            2,
-                        )
-                        label_top = max(0, top - marker_height - baseline - 8)
-                        cv2.rectangle(
-                            annotated_frame,
-                            (left, label_top),
-                            (left + marker_width + 10, top),
-                            marker_color,
-                            -1,
-                        )
-                        cv2.putText(
-                            annotated_frame,
-                            marker,
-                            (left + 5, top - baseline - 3),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.65,
-                            (20, 32, 29),
-                            2,
-                            cv2.LINE_AA,
-                        )
+        ball_candidates = [
+            ball_log[i] if i < len(ball_log) and ball_log[i] is not None else fallback_balls[i]
+            for i in range(len(frames))
+        ]
+        # Sauvegarde AVANT l'analyse : on pourra la rejouer (replay_analysis.py) avec d'autres
+        # seuils en quelques secondes, sans relancer YOLO, même si l'analyse échoue.
+        save_raw_detections(video_path.with_name("raw_detections.npz"), frames, ball_candidates, fps)
+        analysis = analyse_match(frames, ball_candidates, fps)
 
-            possession.append(possession_tracker.update(frame_index, frame_players, frame_ball))
-
-            if track_frames_stream is None:
-                raise RuntimeError("Unable to write per-frame tracking data")
-            if frame_index % 300 == 0:
-                frame_offsets.append([frame_index, track_frames_stream.tell()])
-            line = json.dumps(
-                {"frame": frame_index, "detections": frame_detections},
-                separators=(",", ":"),
-            )
-            track_frames_stream.write(f"{line}\n".encode("utf-8"))
-
-            if video_encoder is None:
-                frame_height, frame_width = annotated_frame.shape[:2]
-                video_encoder = subprocess.Popen(
-                    [
-                        imageio_ffmpeg.get_ffmpeg_exe(),
-                        "-y",
-                        "-loglevel", "error",
-                        "-f", "rawvideo",
-                        "-vcodec", "rawvideo",
-                        "-pix_fmt", "bgr24",
-                        "-s:v", f"{frame_width}x{frame_height}",
-                        "-r", str(fps),
-                        "-i", "-",
-                        "-an",
-                        "-c:v", "libx264",
-                        "-preset", "veryfast",
-                        "-crf", "23",
-                        "-pix_fmt", "yuv420p",
-                        "-movflags", "+faststart",
-                        str(annotated_video_path),
-                    ],
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-                if video_encoder.stdin is None:
-                    raise RuntimeError("Unable to open the annotated video encoder")
-            if video_encoder.stdin is None:
-                raise RuntimeError("The annotated video encoder closed its input")
-            video_encoder.stdin.write(annotated_frame.tobytes())
-
-        if video_encoder is not None:
-            if video_encoder.stdin is not None:
-                video_encoder.stdin.close()
-            return_code = video_encoder.wait()
-            video_encoder = None
-            if return_code != 0:
-                raise RuntimeError("FFmpeg could not encode the annotated preview")
-        if track_frames_stream is not None:
-            track_frames_stream.close()
-            track_frames_stream = None
-        track_frame_index_path.write_text(json.dumps(frame_offsets), encoding="utf-8")
+        _write_track_frames(track_frames_path, track_frame_index_path, frames, analysis)
+        rendered = _render_annotated(
+            cv2, imageio_ffmpeg, video_path, annotated_video_path, fps, frames, analysis, cancel_event
+        )
+        if not rendered or not annotated_video_path.is_file():
+            raise ValueError("The annotated video could not be generated")
     except Exception:
-        if track_frames_stream is not None:
-            track_frames_stream.close()
         track_frames_path.unlink(missing_ok=True)
         track_frame_index_path.unlink(missing_ok=True)
-        if video_encoder is not None:
-            if video_encoder.poll() is None:
-                video_encoder.kill()
-            video_encoder.wait()
         annotated_video_path.unlink(missing_ok=True)
         raise
 
-    if not processed_frames or not annotated_video_path.is_file():
-        annotated_video_path.unlink(missing_ok=True)
-        track_frames_path.unlink(missing_ok=True)
-        track_frame_index_path.unlink(missing_ok=True)
-        raise ValueError("The annotated video could not be generated")
+    tracks = analysis.track_summaries()
+    observed = int(analysis.ball_observed.sum())
+    if observed:
+        indices = np.flatnonzero(analysis.ball_observed)
+        tracks.append({
+            "trackId": BALL_TRACK_ID,
+            "class": "ball",
+            "detections": observed,
+            "firstFrame": int(indices[0]),
+            "lastFrame": int(indices[-1]),
+            "visibleSeconds": round((int(indices[-1]) - int(indices[0]) + 1) / fps, 2),
+        })
 
-    team_classifier.assign_teams()
-    pass_stats = detect_passes(possession, team_classifier.team_for, fps)
-
-    player_tracks = []
-    for track in tracks.values():
-        role = track["classCounts"].most_common(1)[0][0]
-        first_frame = track["firstFrame"]
-        last_frame = track["lastFrame"]
-        entry = {
-            "trackId": track["trackId"],
-            "class": role,
-            "detections": track["detections"],
-            "firstFrame": first_frame,
-            "lastFrame": last_frame,
-            "visibleSeconds": round((last_frame - first_frame + 1) / fps, 2),
-        }
-        if role in {"player", "person"}:
-            entry["team"] = team_classifier.team_for(track["trackId"])
-            passes = pass_stats.get(track["trackId"], {"attempted": 0, "completed": 0, "failed": 0})
-            entry["passesAttempted"] = passes["attempted"]
-            entry["passesCompleted"] = passes["completed"]
-            entry["passesFailed"] = passes["failed"]
-        player_tracks.append(entry)
-
+    players = [t for t in tracks if t["class"] in {"player", "person"}]
     return {
-        "processedFrames": processed_frames,
+        "processedFrames": len(frames),
         "fps": fps,
-        "tracks": sorted(player_tracks, key=lambda track: track["trackId"]),
+        "tracks": sorted(tracks, key=lambda track: track["trackId"]),
         "annotatedVideoAvailable": True,
         "trackFramesAvailable": True,
+        "ball": {
+            "observedFrames": observed,
+            "validFrames": int(analysis.ball_valid.sum()),
+            "coverage": round(observed / len(frames), 4),
+            "touches": len(analysis.touches),
+            "touchesContested": sum(1 for t in analysis.touches if t.quality == "contested"),
+            "touchesUnattributed": sum(1 for t in analysis.touches if t.quality == "none"),
+        },
+        "passEvents": analysis.pass_events,
+        "diagnostics": analysis.diagnostics(),
+        "quality": {
+            "rawTrackIds": analysis.raw_track_count,
+            "stableIdentities": len(players),
+            "ambiguousLinks": len(analysis.stabilised.ambiguous_segments),
+            "playerHeightPx": round(analysis.player_height, 1),
+        },
     }

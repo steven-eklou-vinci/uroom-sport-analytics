@@ -3,24 +3,22 @@
 Ported and adapted from the reference repositories:
   * AnshChoudhary/Football-Tracking — PlayerBallAssigner and TeamAssigner.
 
-Adjustments made for the Uroom pipeline:
-  * ball assignment uses a resolution-independent distance (scaled to the player
-    box height) instead of the hard-coded 70px threshold, and refuses balls that
-    are not at leg height so an airborne ball is never credited to a player;
-  * jersey colours are accumulated across the whole video per track instead of a
-    single frame, which is far more robust when players leave the frame early;
-  * possession is debounced (a candidate owner must be seen with the ball twice)
-    and released quickly, so an isolated detection cannot invent a possession.
-
-Only pure, streaming-friendly helpers live here so ``football_tracking`` stays
-focused on the YOLO/ffmpeg orchestration.
+Contenu :
+  * ``distance`` / ``box_center`` / ``jersey_colour`` : briques de base (utilisées par
+    football_tracking.py, tracklets.py et touches.py) ;
+  * ``cluster_two_teams`` : K-Means sur les couleurs de maillots, avec rejet des
+    valeurs aberrantes (gardiens, arbitre) qui n'ont alors pas d'équipe ;
+  * ``TeamClassifier`` : ancien classifieur par piste (conservé pour compatibilité) ;
+  * ``PlayerBallAssigner`` / ``PossessionTracker`` / ``detect_passes`` : ancienne logique
+    de possession image par image. **Legacy** : elle supprime les passes en une touche
+    (voir touches.py pour la détection par événements, qui la remplace).
 """
 
 from __future__ import annotations
 
 import math
 from collections import defaultdict
-from typing import Optional, Sequence
+from typing import Mapping, Optional, Sequence
 
 import numpy as np
 
@@ -56,20 +54,94 @@ def jersey_colour(frame_bgr: np.ndarray, box: Sequence[float]) -> Optional[np.nd
     return jersey.mean(axis=0)
 
 
-class PlayerBallAssigner:
-    """Assigns the ball to the closest player, measured from their feet corners.
+def cluster_two_teams(
+    colours: Mapping[int, np.ndarray],
+    outlier_factor: float = 2.5,
+    outlier_floor: float = 25.0,
+) -> dict[int, int]:
+    """Répartit des couleurs moyennes (BGR) en deux équipes (1 et 2).
 
-    Mirrors the reference implementation but keeps the threshold meaningful on
-    wide footage (Veo, panoramic): the accepted distance scales with the player
-    box height, so it means the same thing whether the player is close to the
-    camera or far from it. Two guards keep the attribution honest:
+    Les éléments trop éloignés de leur centre (gardiens, arbitre, couleur mal
+    mesurée) ne reçoivent PAS d'équipe : mieux vaut « inconnu » qu'une équipe
+    fausse, car l'équipe décide si une passe est réussie ou perdue.
 
-    * the ball must sit at leg height — a ball seen at chest or head height is
-      in flight and belongs to nobody, and crediting it to the nearest player is
-      exactly what invents passes that never happened;
-    * the distance is capped in pixels so a large close-up box cannot reach an
-      unrelated ball.
+    ``outlier_floor`` (distance BGR minimale avant de parler d'aberrant) et
+    ``outlier_factor`` (multiple de la distance médiane) sont des seuils
+    heuristiques à ajuster sur tes vidéos.
     """
+    keys = list(colours)
+    if len(keys) < 2:
+        return {}
+    matrix = np.stack([np.asarray(colours[key], dtype=np.float64) for key in keys])
+    if np.allclose(matrix, matrix[0]):
+        return {}
+    try:
+        from sklearn.cluster import KMeans
+    except ImportError:
+        return {}
+
+    def fit(rows: np.ndarray):
+        model = KMeans(n_clusters=2, init="k-means++", n_init=10, random_state=0)
+        labels = model.fit_predict(rows)
+        distances = np.linalg.norm(rows - model.cluster_centers_[labels], axis=1)
+        return model, labels, distances
+
+    model, labels, distances = fit(matrix)
+    limit = max(outlier_floor, outlier_factor * float(np.median(distances)))
+    inliers = distances <= limit
+    # Deuxième passe : on réajuste les centres sans les aberrants (ils tirent le K-Means).
+    if 2 <= inliers.sum() < len(keys) and not np.allclose(matrix[inliers], matrix[inliers][0]):
+        model, labels_in, _ = fit(matrix[inliers])
+        labels = model.predict(matrix)
+        distances = np.linalg.norm(matrix - model.cluster_centers_[labels], axis=1)
+        limit = max(outlier_floor, outlier_factor * float(np.median(distances[inliers])))
+        inliers = distances <= limit
+    return {key: int(label) + 1 for key, label, ok in zip(keys, labels, inliers) if ok}
+
+
+class TeamClassifier:
+    """Clusters player tracks into two teams from their jersey colours (par piste)."""
+
+    def __init__(self, sample_interval: int = 12, max_samples_per_track: int = 240):
+        self.sample_interval = max(1, sample_interval)
+        self.max_samples_per_track = max_samples_per_track
+        self._observations: dict[int, int] = {}
+        self._colour_sums: dict[int, np.ndarray] = {}
+        self._colour_counts: dict[int, int] = {}
+        self._teams: dict[int, int] = {}
+
+    def observe(self, track_id: int, frame_bgr: np.ndarray, box: Sequence[float]) -> None:
+        seen = self._observations.get(track_id, 0) + 1
+        self._observations[track_id] = seen
+        if seen % self.sample_interval:
+            return
+        if self._colour_counts.get(track_id, 0) >= self.max_samples_per_track:
+            return
+        colour = jersey_colour(frame_bgr, box)
+        if colour is None:
+            return
+        self._colour_sums[track_id] = self._colour_sums.get(track_id, np.zeros(3)) + colour
+        self._colour_counts[track_id] = self._colour_counts.get(track_id, 0) + 1
+
+    def assign_teams(self) -> None:
+        averages = {
+            track_id: self._colour_sums[track_id] / count
+            for track_id, count in self._colour_counts.items()
+            if count > 0
+        }
+        self._teams = cluster_two_teams(averages)
+
+    def team_for(self, track_id: int) -> Optional[int]:
+        return self._teams.get(track_id)
+
+
+# ---------------------------------------------------------------------------
+# LEGACY — possession image par image (conservé pour ne rien casser).
+# Le pipeline actuel utilise touches.py à la place.
+# ---------------------------------------------------------------------------
+
+class PlayerBallAssigner:
+    """Assigns the ball to the closest player, measured from their feet corners."""
 
     def __init__(
         self,
@@ -102,18 +174,7 @@ class PlayerBallAssigner:
 
 
 class PossessionTracker:
-    """Owns the ball across frames, persisting possession between detections.
-
-    Football footage only yields a ball detection on a small fraction of frames,
-    so resetting possession on every missing detection fragments the timeline
-    beyond use. The owner is therefore kept until another player is seen with the
-    ball, and only released after a short gap (dead ball, camera cut).
-
-    A candidate owner must additionally be seen with the ball on several
-    consecutive detections before it counts: isolated ball boxes (partly missed
-    or false) are frequent, and on their own they would fabricate a possession —
-    and therefore a pass — out of nothing.
-    """
+    """Owns the ball across frames, persisting possession between detections (legacy)."""
 
     def __init__(self, assigner: PlayerBallAssigner, max_gap_frames: int, min_detections: int = 2):
         self._assigner = assigner
@@ -149,57 +210,6 @@ class PossessionTracker:
         return self._holder
 
 
-class TeamClassifier:
-    """Clusters player tracks into two teams from their jersey colours."""
-
-    def __init__(self, sample_interval: int = 12, max_samples_per_track: int = 240):
-        self.sample_interval = max(1, sample_interval)
-        self.max_samples_per_track = max_samples_per_track
-        self._observations: dict[int, int] = {}
-        self._colour_sums: dict[int, np.ndarray] = {}
-        self._colour_counts: dict[int, int] = {}
-        self._teams: dict[int, int] = {}
-
-    def observe(self, track_id: int, frame_bgr: np.ndarray, box: Sequence[float]) -> None:
-        seen = self._observations.get(track_id, 0) + 1
-        self._observations[track_id] = seen
-        if seen % self.sample_interval:
-            return
-        if self._colour_counts.get(track_id, 0) >= self.max_samples_per_track:
-            return
-        colour = jersey_colour(frame_bgr, box)
-        if colour is None:
-            return
-        self._colour_sums[track_id] = self._colour_sums.get(track_id, np.zeros(3)) + colour
-        self._colour_counts[track_id] = self._colour_counts.get(track_id, 0) + 1
-
-    def assign_teams(self) -> None:
-        averages = {
-            track_id: self._colour_sums[track_id] / count
-            for track_id, count in self._colour_counts.items()
-            if count > 0
-        }
-        self._teams = {}
-        if len(averages) < 2:
-            return
-        matrix = np.stack(list(averages.values()))
-        if np.allclose(matrix, matrix[0]):
-            return
-        try:
-            from sklearn.cluster import KMeans
-        except ImportError:
-            return
-        model = KMeans(n_clusters=2, init="k-means++", n_init=10, random_state=0)
-        labels = model.fit_predict(matrix)
-        self._teams = {
-            track_id: int(label) + 1
-            for track_id, label in zip(averages.keys(), labels)
-        }
-
-    def team_for(self, track_id: int) -> Optional[int]:
-        return self._teams.get(track_id)
-
-
 def detect_passes(
     possession: Sequence[Optional[int]],
     team_for,
@@ -207,11 +217,10 @@ def detect_passes(
     min_hold_seconds: float = 0.4,
     max_gap_seconds: float = 2.0,
 ) -> dict[int, dict[str, int]]:
-    """Count completed and failed passes per track from a per-frame possession list.
+    """LEGACY : passes à partir d'une liste de possession image par image.
 
-    ``possession`` holds the track id that owns the ball on each frame (``None``
-    when the ball is loose). A pass is a possession transfer between two distinct
-    players close enough in time; it is completed when both share a team.
+    ``min_hold_seconds`` élimine toute possession plus courte que 0,4 s, donc les
+    joueurs d'une passe en une touche. Utilise touches.passes_from_touches à la place.
     """
     min_hold_frames = max(1, int(round(min_hold_seconds * fps)))
     max_gap_frames = max(min_hold_frames, int(round(max_gap_seconds * fps)))
